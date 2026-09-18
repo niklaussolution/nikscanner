@@ -1,0 +1,299 @@
+// NIKSCANNER database schema.
+// Run `npx prisma generate` after installing @prisma/client and prisma,
+// then `npx prisma migrate dev` once DATABASE_URL is configured.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ScanTargetType {
+  URL
+  FILE
+  DOMAIN
+  IP
+  QR
+  DEVICE
+}
+
+enum ThreatLevel {
+  SAFE
+  LOW_RISK
+  SUSPICIOUS
+  HIGH_RISK
+  MALICIOUS
+}
+
+enum ReportStatus {
+  PENDING_REVIEW
+  VERIFIED
+  REJECTED
+  DUPLICATE
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  username      String?   @unique
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  country       String?
+  points        Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  scans         Scan[]
+  reports       ThreatReport[]
+  blockedUrls   BlockedUrl[]
+  achievements  UserAchievement[]
+  devices       Device[]
+  apiKeys       ApiKey[]
+  subscription  Subscription?
+  auditLogs     AuditLog[]
+  notifications Notification[]
+  votes         CommunityVote[]
+  leaderboard   LeaderboardScore[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Scan {
+  id         String         @id @default(cuid())
+  userId     String?
+  targetType ScanTargetType
+  target     String
+  score      Int
+  threatLevel ThreatLevel
+  confidence Int
+  demo       Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+
+  user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  results   ScanResult[]
+  detections Detection[]
+
+  @@index([userId])
+  @@index([target])
+}
+
+model ScanTarget {
+  id         String         @id @default(cuid())
+  targetType ScanTargetType
+  value      String         @unique
+  firstSeen  DateTime       @default(now())
+  lastSeen   DateTime       @updatedAt
+}
+
+model ScanResult {
+  id        String   @id @default(cuid())
+  scanId    String
+  provider  String
+  raw       Json
+  createdAt DateTime @default(now())
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+}
+
+model Detection {
+  id       String @id @default(cuid())
+  scanId   String
+  engineId String
+  engine   String
+  verdict  String
+  detail   String?
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+}
+
+model ThreatReport {
+  id         String       @id @default(cuid())
+  userId     String
+  url        String
+  threatType String
+  reason     String
+  evidence   String?
+  status     ReportStatus @default(PENDING_REVIEW)
+  pointsAwarded Int       @default(0)
+  createdAt  DateTime     @default(now())
+  reviewedAt DateTime?
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes CommunityVote[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model CommunityVote {
+  id       String  @id @default(cuid())
+  reportId String
+  userId   String
+  helpful  Boolean
+
+  report ThreatReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reportId, userId])
+}
+
+model BlockedUrl {
+  id         String      @id @default(cuid())
+  userId     String
+  url        String
+  reason     String?
+  threatType String?
+  score      Int?
+  source     String      @default("scan")
+  status     String      @default("active")
+  createdAt  DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model LeaderboardScore {
+  id             String   @id @default(cuid())
+  userId         String
+  period         String // "all_time" | "monthly" | "weekly"
+  points         Int      @default(0)
+  threatsReported Int     @default(0)
+  verifiedReports Int     @default(0)
+  accuracy       Float    @default(0)
+  rank           Int?
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, period])
+}
+
+model Achievement {
+  id          String @id @default(cuid())
+  slug        String @unique
+  title       String
+  description String
+
+  users UserAchievement[]
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+}
+
+model Device {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  platform     String
+  securityScore Int?
+  lastSeenAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ApiKey {
+  id           String    @id @default(cuid())
+  userId       String
+  name         String
+  keyPrefix    String
+  keyHash      String    @unique
+  requestCount Int       @default(0)
+  lastUsedAt   DateTime?
+  revoked      Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Subscription {
+  id                   String           @id @default(cuid())
+  userId               String           @unique
+  plan                 SubscriptionPlan @default(FREE)
+  razorpayCustomerId   String?
+  razorpaySubscriptionId String?
+  status               String           @default("active")
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

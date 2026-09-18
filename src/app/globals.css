@@ -1,0 +1,218 @@
+@import "tailwindcss";
+
+:root {
+  /* Brand */
+  --flame-primary: #ff5a00;
+  --flame-bright: #ff7a00;
+  --flame-hot: #ff3d00;
+  --flame-deep: #d94700;
+
+  /* Surfaces */
+  --pure-black: #000000;
+  --bg-black: #050505;
+  --secondary-dark: #0a0a0a;
+  --card-bg: #101010;
+  --card-elevated: #151515;
+
+  /* Text */
+  --white: #ffffff;
+  --soft-white: #f5f5f5;
+  --muted: #a3a3a3;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+
+  /* Status */
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+
+  --background: var(--bg-black);
+  --foreground: var(--soft-white);
+}
+
+@theme inline {
+  --color-flame-primary: var(--flame-primary);
+  --color-flame-bright: var(--flame-bright);
+  --color-flame-hot: var(--flame-hot);
+  --color-flame-deep: var(--flame-deep);
+
+  --color-pure-black: var(--pure-black);
+  --color-bg-black: var(--bg-black);
+  --color-secondary-dark: var(--secondary-dark);
+  --color-card-bg: var(--card-bg);
+  --color-card-elevated: var(--card-elevated);
+
+  --color-white: var(--white);
+  --color-soft-white: var(--soft-white);
+  --color-muted: var(--muted);
+  --color-border-subtle: var(--border-subtle);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --font-heading: var(--font-space-grotesk);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+
+  --animate-scan-line: scan-line 2.2s ease-in-out infinite;
+  --animate-radar-sweep: radar-sweep 3s linear infinite;
+  --animate-pulse-glow: pulse-glow 2.4s ease-in-out infinite;
+  --animate-marquee: marquee 30s linear infinite;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Subtle grid backdrop used across the product */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.bg-radial-flame {
+  background: radial-gradient(circle at 50% 0%, rgba(255, 90, 0, 0.16), transparent 60%);
+}
+
+.text-flame-gradient {
+  background: linear-gradient(90deg, var(--flame-hot), var(--flame-primary) 45%, var(--flame-bright));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.border-glow-flame {
+  box-shadow: 0 0 0 1px rgba(255, 90, 0, 0.35), 0 0 24px rgba(255, 90, 0, 0.18);
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 90, 0, 0.35);
+  border-radius: 999px;
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+@keyframes radar-sweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; box-shadow: 0 0 0 0 rgba(255, 90, 0, 0.4); }
+  50% { opacity: 1; box-shadow: 0 0 0 6px rgba(255, 90, 0, 0); }
+}
+
+@keyframes marquee {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+
+@keyframes caret-blink {
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.caret-blink {
+  animation: caret-blink 1s step-end infinite;
+}
+
+@keyframes scan-node-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 90, 0, 0.45); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 90, 0, 0); }
+}
+
+.scan-node-pulse {
+  animation: scan-node-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes radar-spin-cw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes radar-spin-ccw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+@keyframes orbit-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.6); opacity: 0.4; }
+}
+
+.radar-rotate-cw { animation: radar-spin-cw 18s linear infinite; }
+.radar-rotate-ccw { animation: radar-spin-ccw 14s linear infinite; }
+.radar-rotate-cw-beam { animation: radar-spin-cw 6s linear infinite; }
+.radar-rotate-cw-fast { animation: radar-spin-cw 5s linear infinite; }
+.radar-rotate-ccw-fast { animation: radar-spin-ccw 4s linear infinite; }
+.radar-rotate-cw-beam-fast { animation: radar-spin-cw 1.4s linear infinite; }
+.orbit-pulse { animation: orbit-pulse 2.2s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+
+@keyframes node-line-pulse {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.6; }
+}
+.node-line-pulse { animation: node-line-pulse 2.8s ease-in-out infinite; }
+
+@keyframes location-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+@keyframes location-pulse-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+.location-pulse { animation: location-pulse 1.8s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+.location-pulse-ring { animation: location-pulse-ring 1.8s ease-out infinite; transform-origin: center; transform-box: fill-box; }
+
+@keyframes qr-scanline {
+  0% { top: 0%; opacity: 0; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+.qr-scanline { animation: qr-scanline 3.2s linear infinite; }
+.qr-scanline-fast { animation-duration: 1s; }
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(1.06); }
+}
+.pulse-soft { animation: pulse-soft 2.4s ease-in-out infinite; }
+
+@keyframes podium-crown-float {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, -5px); }
+}
+.podium-crown-float { animation: podium-crown-float 2.6s ease-in-out infinite; }
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.ticker-track { animation: ticker-scroll 28s linear infinite; }

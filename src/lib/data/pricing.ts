@@ -1,0 +1,61 @@
+import type { PricingTier } from "@/components/pricing/pricing-card";
+
+export const PRICING_TIERS: PricingTier[] = [
+  {
+    name: "Free",
+    price: "$0",
+    period: "forever",
+    description: "For individuals getting started with safe browsing.",
+    features: ["Basic URL scans", "Limited file scans", "Community access", "30-day scan history"],
+    cta: "Get Started",
+    href: "/signup",
+  },
+  {
+    name: "Pro",
+    price: "$12",
+    period: "month",
+    description: "For power users and freelancers who scan daily.",
+    features: [
+      "Unlimited URL scans",
+      "Advanced file analysis",
+      "Realtime protection",
+      "Full scan history",
+      "Priority scanning queue",
+      "API access (10k req/mo)",
+    ],
+    cta: "Start Free Trial",
+    href: "/signup?plan=pro",
+    highlighted: true,
+  },
+  {
+    name: "Business",
+    price: "$49",
+    period: "month",
+    description: "For teams that need shared visibility and control.",
+    features: [
+      "Everything in Pro",
+      "Team accounts (10 seats)",
+      "Central blocklist",
+      "Device management",
+      "Threat monitoring",
+      "Exportable reports",
+    ],
+    cta: "Start Free Trial",
+    href: "/signup?plan=business",
+  },
+  {
+    name: "Enterprise",
+    price: "Custom",
+    description: "For organizations with dedicated security needs.",
+    features: [
+      "Custom API limits",
+      "Dedicated support",
+      "Enterprise threat intelligence",
+      "SSO",
+      "Custom integrations",
+      "SLA",
+    ],
+    cta: "Contact Sales",
+    href: "/contact",
+  },
+];
