@@ -16,6 +16,7 @@ import { FILE_STAGES, type FileScanState } from "@/components/scanner-file/types
 import { validateFileMeta, sniffMatchesExtension, hashFileSHA256, formatBytes, getExtension } from "@/components/scanner-file/file-validation";
 import { fileTypeLabel } from "@/components/scanner-file/file-analysis";
 import { THREAT_LEVEL_LABEL, type ScanResultPayload } from "@/types/scan";
+import { logScanIfSignedIn } from "@/lib/firebase/log-scan";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -227,6 +228,7 @@ export function FileScannerWorkspace() {
       setCards(computeResultCards(result, file, sha256));
       setDemoResult(result.demo);
       setFileScanState("complete");
+      logScanIfSignedIn({ target: file.name, targetType: "file", threatLevel: result.threatLevel, score: result.score });
 
       const isSafe = result.threatLevel === "SAFE" || result.threatLevel === "LOW_RISK";
       const verdictTone: RecentScanEntry["verdictTone"] = isSafe ? "safe" : "danger";

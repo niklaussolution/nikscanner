@@ -1,10 +1,43 @@
-import { CreditCard } from "lucide-react";
+"use client";
+
+import { useEffect, useState } from "react";
+import { CreditCard, Loader2, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PricingCard } from "@/components/pricing/pricing-card";
-import { PRICING_TIERS } from "@/lib/data/pricing";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/firebase/auth-context";
+import { authedJson, publicJson } from "@/lib/firebase/api";
+import type { CreditsBalanceResult, BackendPlan, PaymentPlansResult } from "@/lib/firebase/nikscanner-types";
 
 export default function BillingPage() {
+  const { user, loading: authLoading } = useAuth();
+  const [balance, setBalance] = useState<CreditsBalanceResult | null>(null);
+  const [plans, setPlans] = useState<BackendPlan[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    publicJson<PaymentPlansResult>("/api/payment/plans")
+      .then((res) => setPlans(res.plans))
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load plans."));
+  }, []);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    let cancelled = false;
+
+    authedJson<CreditsBalanceResult>("/api/credits/balance")
+      .then((res) => {
+        if (!cancelled) setBalance(res);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load billing info.");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -12,31 +45,74 @@ export default function BillingPage() {
         <p className="mt-1 text-sm text-muted">Manage your plan and payment method.</p>
       </div>
 
+      {error && <p className="text-sm text-danger">{error}</p>}
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Current Plan</CardTitle>
-          <Badge variant="flame">Free</Badge>
+          {balance && <Badge variant={balance.plan_key === "free" ? "neutral" : "flame"}>{balance.plan_label}</Badge>}
         </CardHeader>
         <CardContent className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border-subtle bg-card-elevated text-muted">
-              <CreditCard className="h-5 w-5" />
+          {!balance ? (
+            <div className="flex items-center gap-2 text-sm text-muted">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading plan...
             </div>
-            <div>
-              <p className="text-sm font-medium text-white">No payment method on file</p>
-              <p className="text-xs text-muted">Upgrade to Pro to add a card via Razorpay checkout.</p>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border-subtle bg-card-elevated text-muted">
+                <CreditCard className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white">
+                  {balance.pro_unlimited_url ? "Unlimited URL scans" : `${balance.credits} scan credits remaining`}
+                </p>
+                <p className="text-xs text-muted">
+                  File scans used: {balance.file_scans_used} / {balance.file_scans_allowed}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
       <div>
         <h2 className="mb-4 font-heading text-lg font-bold text-white">Upgrade Plan</h2>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {PRICING_TIERS.map((tier) => (
-            <PricingCard key={tier.name} tier={tier} />
-          ))}
-        </div>
+        {!plans ? (
+          <div className="flex items-center gap-2 py-8 text-sm text-muted">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading plans...
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {plans.map((plan) => (
+              <div key={plan.key} className="flex h-full flex-col rounded-2xl border border-border-subtle bg-card-bg p-6">
+                <h3 className="font-heading text-lg font-bold capitalize text-white">{plan.label}</h3>
+                <div className="mt-5 flex items-baseline gap-1">
+                  <span className="font-heading text-3xl font-bold text-white">₹{plan.amount_rupees}</span>
+                  <span className="text-sm text-muted">one-time</span>
+                </div>
+
+                <ul className="mt-6 flex-1 space-y-3">
+                  {plan.unlimited_url ? (
+                    <li className="flex items-start gap-2 text-sm text-soft-white">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-flame-bright" /> Unlimited URL scans
+                    </li>
+                  ) : (
+                    <li className="flex items-start gap-2 text-sm text-soft-white">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-flame-bright" /> +{plan.credits} scan credits
+                    </li>
+                  )}
+                  <li className="flex items-start gap-2 text-sm text-soft-white">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-flame-bright" /> +{plan.files} file scans
+                  </li>
+                </ul>
+
+                <Button className="mt-6 w-full" variant="outline" disabled>
+                  Checkout coming soon
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

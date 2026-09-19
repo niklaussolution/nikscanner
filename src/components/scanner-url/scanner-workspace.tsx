@@ -12,6 +12,7 @@ import { ScanEngineRadar } from "@/components/scanner-url/scan-engine-radar";
 import { RecentScans, INITIAL_RECENT_SCANS, type RecentScanEntry } from "@/components/scanner-url/recent-scans";
 import { STAGES, type AnalysisCardData, type ScanState } from "@/components/scanner-url/types";
 import { THREAT_LEVEL_LABEL, type ScanResultPayload } from "@/types/scan";
+import { logScanIfSignedIn } from "@/lib/firebase/log-scan";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -193,6 +194,7 @@ export function ScannerWorkspace() {
       setActiveStageIndex(STAGES.length - 1);
       setCards(computeResultCards(result, trimmed));
       setScanState("complete");
+      logScanIfSignedIn({ target: trimmed, targetType: "url", threatLevel: result.threatLevel, score: result.score });
       const isSafe = result.threatLevel === "SAFE" || result.threatLevel === "LOW_RISK";
       const verdictTone: RecentScanEntry["verdictTone"] = isSafe ? "safe" : "danger";
       setRecentScans((prev) => [

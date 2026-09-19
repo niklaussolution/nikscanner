@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Check, CreditCard, Clock3, ShieldCheck, CalendarDays } from "lucide-react";
+import { Check, CreditCard, Clock3, ShieldCheck, Loader2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { publicJson } from "@/lib/firebase/api";
+import type { BackendPlan, PaymentPlansResult } from "@/lib/firebase/nikscanner-types";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -16,14 +18,11 @@ function prefersReducedMotion() {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-type Billing = "monthly" | "yearly";
-
 interface Plan {
-  id: "free" | "pro" | "business";
+  id: string;
   badge?: string;
   name: string;
   price: string;
-  yearlyPrice?: string;
   period?: string;
   description: string;
   features: string[];
@@ -32,72 +31,48 @@ interface Plan {
   featured?: boolean;
 }
 
-const PLANS: Plan[] = [
-  {
-    id: "free",
-    name: "Free",
-    price: "₹0",
-    period: "forever",
-    description: "Essential protection for everyday checks.",
-    features: ["25 scans per month", "URL and domain scanning", "Community threat reports", "Basic scan history"],
-    cta: "Start Free",
+function planFromBackend(plan: BackendPlan): Plan {
+  const featured = plan.key === "pro";
+  return {
+    id: plan.key,
+    badge: featured ? "Most Popular" : undefined,
+    name: plan.label,
+    price: `₹${plan.amount_rupees}`,
+    period: "one-time",
+    description: plan.unlimited_url ? "Unlimited URL scans for power users." : `Top up with ${plan.credits} scan credits.`,
+    features: [
+      plan.unlimited_url ? "Unlimited URL scans" : `+${plan.credits} scan credits`,
+      `+${plan.files} file scans`,
+    ],
+    cta: "Get Started",
     href: "/signup",
-  },
-  {
-    id: "pro",
-    badge: "Most Popular",
-    name: "Pro",
-    price: "₹499",
-    yearlyPrice: "₹399",
-    period: "/ month",
-    description: "Advanced scanning for professionals.",
-    features: [
-      "2,500 scans per month",
-      "URL, file, domain and IP scanning",
-      "Real-time threat alerts",
-      "Full scan history",
-      "Priority analysis",
-    ],
-    cta: "Choose Pro",
-    href: "/signup?plan=pro",
-    featured: true,
-  },
-  {
-    id: "business",
-    name: "Business",
-    price: "Custom",
-    description: "Security intelligence for growing teams.",
-    features: [
-      "Unlimited team members",
-      "API and webhook access",
-      "Shared threat workspace",
-      "Advanced reporting",
-      "Dedicated support",
-    ],
-    cta: "Contact Sales",
-    href: "/contact",
-  },
-];
+    featured,
+  };
+}
 
 const TRUST_ITEMS: { icon: LucideIcon; label: string }[] = [
   { icon: CreditCard, label: "No credit card" },
-  { icon: Clock3, label: "Cancel anytime" },
+  { icon: Clock3, label: "Credits never expire" },
   { icon: ShieldCheck, label: "Secure payments" },
-  { icon: CalendarDays, label: "3-day Pro trial" },
 ];
 
 export function PricingPreview() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const toggleRef = useRef<HTMLDivElement>(null);
-  const indicatorRef = useRef<HTMLDivElement>(null);
-  const monthlyBtnRef = useRef<HTMLButtonElement>(null);
-  const yearlyBtnRef = useRef<HTMLButtonElement>(null);
-  const proButtonRef = useRef<HTMLAnchorElement>(null);
-  const [billing, setBilling] = useState<Billing>("monthly");
+  const featuredButtonRef = useRef<HTMLAnchorElement>(null);
+  const [plans, setPlans] = useState<BackendPlan[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    publicJson<PaymentPlansResult>("/api/payment/plans")
+      .then((res) => setPlans(res.plans))
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load plans."));
+  }, []);
+
+  const displayPlans: Plan[] = plans ? plans.map(planFromBackend) : [];
 
   useEffect(() => {
     const section = sectionRef.current;
-    if (!section) return;
+    if (!section || !plans) return;
     const reduced = prefersReducedMotion();
 
     const ctx = gsap.context(() => {
@@ -109,7 +84,6 @@ export function PricingPreview() {
       tl.fromTo("[data-eyebrow]", { opacity: 0, y: 18 }, { opacity: 1, y: 0 })
         .fromTo("[data-heading]", { opacity: 0, y: 45 }, { opacity: 1, y: 0 }, "-=0.55")
         .fromTo("[data-description]", { opacity: 0, y: 18 }, { opacity: 1, y: 0 }, "-=0.55")
-        .fromTo("[data-toggle]", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.6 }, "-=0.4")
         .fromTo(
           "[data-card]:not([data-featured])",
           { opacity: 0, y: 70 },
@@ -125,7 +99,7 @@ export function PricingPreview() {
         .fromTo("[data-trust-item]", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 }, "-=0.2");
 
       if (!reduced) {
-        gsap.to(proButtonRef.current, {
+        gsap.to(featuredButtonRef.current, {
           boxShadow: "0 0 0 6px rgba(255,90,0,0), 0 12px 32px -8px rgba(255,90,0,0.55)",
           duration: 1.8,
           repeat: -1,
@@ -136,25 +110,7 @@ export function PricingPreview() {
     }, section);
 
     return () => ctx.revert();
-  }, []);
-
-  useEffect(() => {
-    const indicator = indicatorRef.current;
-    const target = billing === "monthly" ? monthlyBtnRef.current : yearlyBtnRef.current;
-    const container = toggleRef.current;
-    if (!indicator || !target || !container) return;
-
-    const containerRect = container.getBoundingClientRect();
-    const targetRect = target.getBoundingClientRect();
-    const x = targetRect.left - containerRect.left - 4;
-    const width = targetRect.width;
-
-    if (prefersReducedMotion()) {
-      gsap.set(indicator, { x, width });
-    } else {
-      gsap.to(indicator, { x, width, duration: 0.4, ease: "power3.out" });
-    }
-  }, [billing]);
+  }, [plans]);
 
   return (
     <section
@@ -176,57 +132,11 @@ export function PricingPreview() {
             Protection that scales with you.
           </h2>
           <p data-description className="mt-3 text-lg text-muted sm:text-xl">
-            Start free, upgrade when you need more power.
+            Top up scan credits whenever you need more.
           </p>
-
-          {/* billing toggle */}
-          <div
-            data-toggle
-            ref={toggleRef}
-            role="group"
-            aria-label="Billing period"
-            className="relative mx-auto mt-7 flex h-12 w-full max-w-[330px] items-center rounded-full border border-[#292929] bg-[#0d0d0d] p-1"
-          >
-            <div
-              ref={indicatorRef}
-              aria-hidden
-              className="absolute left-0 top-1 h-10 rounded-full bg-flame-primary"
-              style={{ width: 0 }}
-            />
-            <button
-              ref={monthlyBtnRef}
-              type="button"
-              aria-pressed={billing === "monthly"}
-              onClick={() => setBilling("monthly")}
-              className={cn(
-                "relative z-10 flex-1 rounded-full py-2 text-sm font-bold uppercase tracking-wide transition-colors",
-                billing === "monthly" ? "text-white" : "text-muted hover:text-soft-white",
-              )}
-            >
-              Monthly
-            </button>
-            <button
-              ref={yearlyBtnRef}
-              type="button"
-              aria-pressed={billing === "yearly"}
-              onClick={() => setBilling("yearly")}
-              className={cn(
-                "relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-sm font-bold uppercase tracking-wide transition-colors",
-                billing === "yearly" ? "text-white" : "text-muted hover:text-soft-white",
-              )}
-            >
-              Yearly
-              <span
-                className={cn(
-                  "rounded-full px-1.5 py-0.5 text-[9px] font-bold normal-case tracking-normal",
-                  billing === "yearly" ? "bg-white/20 text-white" : "border border-flame-primary/40 text-flame-primary",
-                )}
-              >
-                Save 20%
-              </span>
-            </button>
-          </div>
         </div>
+
+        {error && <p className="mt-8 text-center text-sm text-danger">{error}</p>}
 
         {/* pricing cards */}
         <div className="relative mt-14 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -234,28 +144,19 @@ export function PricingPreview() {
             aria-hidden
             className="pointer-events-none absolute left-1/2 top-0 hidden h-full w-[38%] -translate-x-1/2 rounded-full bg-flame-primary/10 blur-[100px] lg:block"
           />
-          {PLANS.map((plan) => {
-            const displayPrice = plan.id === "pro" && billing === "yearly" ? plan.yearlyPrice! : plan.price;
-            return (
-              <div
-                key={plan.id}
-                data-card
-                data-featured={plan.featured ? "" : undefined}
-                className={cn(
-                  "relative flex",
-                  plan.featured
-                    ? "order-1 md:order-2"
-                    : plan.id === "free"
-                      ? "order-2 md:order-1"
-                      : "order-3 md:order-3 md:col-span-2 lg:col-span-1",
-                )}
-              >
+          {!plans ? (
+            <div className="col-span-full flex items-center justify-center gap-2 py-10 text-sm text-muted">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading plans...
+            </div>
+          ) : (
+            displayPlans.map((plan) => (
+              <div key={plan.id} data-card data-featured={plan.featured ? "" : undefined} className="relative flex">
                 {/* inner wrapper carries hover/elevation transforms — kept separate from the
                     GSAP-animated outer wrapper above, since GSAP's transform tween on an
                     element permanently overrides any CSS `translate` utility on that same node */}
                 <div
                   className={cn(
-                    "group flex w-full flex-col rounded-[18px] border p-8 transition-all duration-300 hover:-translate-y-1.5 lg:min-h-[540px]",
+                    "group flex w-full flex-col rounded-[18px] border p-8 transition-all duration-300 hover:-translate-y-1.5 lg:min-h-[480px]",
                     plan.featured
                       ? "border-[1.5px] border-flame-primary bg-[#11100f] shadow-[0_20px_60px_-20px_rgba(255,90,0,0.35)] lg:-translate-y-3 hover:lg:-translate-y-4"
                       : "border-[#292929] bg-[#0d0d0d] hover:border-[#3d3d3d]",
@@ -269,8 +170,8 @@ export function PricingPreview() {
                   <p className="text-sm font-bold uppercase tracking-wide text-white">{plan.name}</p>
 
                   <div className="mt-3 flex items-baseline gap-1.5">
-                    <span className="font-heading text-5xl font-extrabold text-white">{displayPrice}</span>
-                    {plan.period && <span className="text-base text-muted">{plan.period}</span>}
+                    <span className="font-heading text-5xl font-extrabold text-white">{plan.price}</span>
+                    {plan.period && <span className="text-base text-muted">/{plan.period}</span>}
                   </div>
 
                   <p className="mt-4 text-base text-muted">{plan.description}</p>
@@ -288,7 +189,7 @@ export function PricingPreview() {
 
                   <Link
                     href={plan.href}
-                    ref={plan.featured ? proButtonRef : undefined}
+                    ref={plan.featured ? featuredButtonRef : undefined}
                     className={cn(
                       "mt-7 flex h-13 w-full items-center justify-center rounded-lg text-base font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-flame-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg-black",
                       plan.featured
@@ -300,8 +201,8 @@ export function PricingPreview() {
                   </Link>
                 </div>
               </div>
-            );
-          })}
+            ))
+          )}
         </div>
 
         {/* trust row */}

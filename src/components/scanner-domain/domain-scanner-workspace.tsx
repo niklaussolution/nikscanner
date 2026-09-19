@@ -15,6 +15,7 @@ import { RecentDomains, INITIAL_RECENT_DOMAINS } from "@/components/scanner-doma
 import { DOMAIN_STAGES, type DomainScanState, type RecentDomainEntry } from "@/components/scanner-domain/types";
 import { normalizeAndValidateDomain } from "@/lib/validation/domain";
 import { THREAT_LEVEL_LABEL, type DomainScanPayload } from "@/types/scan";
+import { logScanIfSignedIn } from "@/lib/firebase/log-scan";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -221,6 +222,7 @@ export function DomainScannerWorkspace() {
       setActiveStageIndex(DOMAIN_STAGES.length - 1);
       setResult(payload);
       setScanState(payload.partial ? "partial" : "complete");
+      logScanIfSignedIn({ target: payload.target, targetType: "domain", threatLevel: payload.threatLevel, score: payload.score });
 
       setRecentDomains((prev) => [
         { id: payload.id, domain: payload.target, verdict: verdictForRecent(payload), verdictTone: verdictToneFromScore(payload.score), time: "Just now" },

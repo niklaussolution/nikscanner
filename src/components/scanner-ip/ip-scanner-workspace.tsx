@@ -15,6 +15,7 @@ import { RecentIpScans, INITIAL_RECENT_IPS } from "@/components/scanner-ip/recen
 import { IP_STAGES, type IpScanState, type RecentIpEntry } from "@/components/scanner-ip/types";
 import { normalizeAndValidateIp } from "@/lib/validation/ip";
 import { THREAT_LEVEL_LABEL, type IpScanPayload } from "@/types/scan";
+import { logScanIfSignedIn } from "@/lib/firebase/log-scan";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -217,6 +218,7 @@ export function IpScannerWorkspace() {
       setActiveStageIndex(IP_STAGES.length - 1);
       setResult(payload);
       setScanState(payload.partial ? "partial" : "complete");
+      logScanIfSignedIn({ target: payload.target, targetType: "ip", threatLevel: payload.threatLevel, score: payload.score });
 
       setRecentIps((prev) => [
         {

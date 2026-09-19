@@ -2,20 +2,39 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  updateProfile,
+} from "firebase/auth";
 import { Loader2 } from "lucide-react";
 import { AuthCard } from "@/components/auth/auth-card";
 import { SocialLogin } from "@/components/auth/social-login";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { firebaseAuth } from "@/lib/firebase/client";
+import { firebaseAuthErrorMessage } from "@/lib/firebase/errors";
+import { initUserAfterAuth } from "@/lib/firebase/init-user";
+import { safeNextPath } from "@/lib/utils";
+
+const googleProvider = new GoogleAuthProvider();
 
 export default function SignupPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const destination = safeNextPath(searchParams.get("next"));
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const password = form.get("password");
+    const name = String(form.get("name") ?? "");
+    const email = String(form.get("email") ?? "");
+    const password = String(form.get("password") ?? "");
     const confirm = form.get("confirmPassword");
 
     if (password !== confirm) {
@@ -25,11 +44,31 @@ export default function SignupPage() {
 
     setLoading(true);
     setError(null);
-    // Account creation wires into Auth.js's credentials provider + Prisma
-    // adapter once DATABASE_URL and NEXTAUTH_SECRET are configured.
-    await new Promise((r) => setTimeout(r, 900));
-    setLoading(false);
-    setError("Account creation is not configured in this environment yet.");
+
+    try {
+      const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+      if (name) await updateProfile(credential.user, { displayName: name });
+      await initUserAfterAuth(credential.user);
+      router.push(destination);
+    } catch (err) {
+      setError(firebaseAuthErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setGoogleLoading(true);
+    setError(null);
+    try {
+      const credential = await signInWithPopup(firebaseAuth, googleProvider);
+      await initUserAfterAuth(credential.user);
+      router.push(destination);
+    } catch (err) {
+      setError(firebaseAuthErrorMessage(err));
+    } finally {
+      setGoogleLoading(false);
+    }
   }
 
   return (
@@ -45,7 +84,7 @@ export default function SignupPage() {
         </>
       }
     >
-      <SocialLogin />
+      <SocialLogin onGoogleClick={handleGoogleSignIn} loading={googleLoading} />
       <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-widest text-muted">
         <span className="h-px flex-1 bg-border-subtle" /> or <span className="h-px flex-1 bg-border-subtle" />
       </div>
@@ -78,7 +117,7 @@ export default function SignupPage() {
 
         {error && <p className="text-sm text-danger">{error}</p>}
 
-        <Button type="submit" className="w-full" size="lg" disabled={loading}>
+        <Button type="submit" className="w-full" size="lg" disabled={loading || googleLoading}>
           {loading && <Loader2 className="h-4 w-4 animate-spin" />}
           {loading ? "Creating account..." : "Create Account"}
         </Button>

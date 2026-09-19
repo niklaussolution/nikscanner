@@ -1,5 +1,13 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { signOut } from "firebase/auth";
+import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { authedJson } from "@/lib/firebase/api";
+import { firebaseAuth } from "@/lib/firebase/client";
 
 const TOGGLES = [
   { label: "Email notifications for high-risk scans", desc: "Get notified when a scan you ran returns HIGH_RISK or MALICIOUS." },
@@ -8,6 +16,28 @@ const TOGGLES = [
 ];
 
 export default function SettingsPage() {
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleDeleteAccount() {
+    const confirmed = window.confirm(
+      "Deactivate your account? You'll be signed out everywhere (web and mobile) and won't be able to sign back in. This doesn't erase your data — contact support if you need it fully removed.",
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setError(null);
+    try {
+      await authedJson("/api/user/deactivate", { method: "POST" });
+      await signOut(firebaseAuth);
+      router.push("/");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to deactivate account.");
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="font-heading text-2xl font-bold text-white">Settings</h1>
@@ -40,10 +70,12 @@ export default function SettingsPage() {
         <CardContent className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-white">Delete account</p>
-            <p className="text-xs text-muted">Permanently remove your account and all associated data.</p>
+            <p className="text-xs text-muted">Deactivates your account and signs you out everywhere, web and mobile.</p>
+            {error && <p className="mt-1 text-xs text-danger">{error}</p>}
           </div>
-          <Button variant="danger" size="sm">
-            Delete Account
+          <Button variant="danger" size="sm" onClick={handleDeleteAccount} disabled={deleting}>
+            {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {deleting ? "Deactivating..." : "Delete Account"}
           </Button>
         </CardContent>
       </Card>

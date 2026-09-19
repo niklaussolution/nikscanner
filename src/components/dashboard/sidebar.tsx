@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut } from "firebase/auth";
 import { LogOut } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 import { DASHBOARD_NAV } from "@/lib/data/dashboard-nav";
+import { firebaseAuth } from "@/lib/firebase/client";
 import { cn } from "@/lib/utils";
 
 export function DashboardSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-border-subtle bg-secondary-dark lg:flex">
@@ -36,7 +39,13 @@ export function DashboardSidebar() {
       </nav>
 
       <div className="border-t border-border-subtle p-3">
-        <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted hover:bg-white/5 hover:text-white">
+        <button
+          onClick={async () => {
+            await signOut(firebaseAuth);
+            router.push("/");
+          }}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted hover:bg-white/5 hover:text-white"
+        >
           <LogOut className="h-4 w-4" />
           Logout
         </button>

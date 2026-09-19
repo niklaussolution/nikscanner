@@ -2,21 +2,41 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { sendPasswordResetEmail } from "firebase/auth";
 import { Loader2, MailCheck } from "lucide-react";
 import { AuthCard } from "@/components/auth/auth-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { firebaseAuth } from "@/lib/firebase/client";
+import { firebaseAuthErrorMessage } from "@/lib/firebase/errors";
 
 export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    setSent(true);
+    setError(null);
+
+    const email = String(new FormData(e.currentTarget).get("email") ?? "");
+
+    try {
+      await sendPasswordResetEmail(firebaseAuth, email);
+      setSent(true);
+    } catch (err) {
+      // Don't leak whether an account exists for this email — only surface errors
+      // that aren't about account existence (bad email format, network, rate limit).
+      const code = (err as { code?: string })?.code;
+      if (code === "auth/user-not-found") {
+        setSent(true);
+      } else {
+        setError(firebaseAuthErrorMessage(err));
+      }
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -42,6 +62,7 @@ export default function ForgotPasswordPage() {
             </label>
             <Input id="email" name="email" type="email" required placeholder="you@company.com" />
           </div>
+          {error && <p className="text-sm text-danger">{error}</p>}
           <Button type="submit" className="w-full" size="lg" disabled={loading}>
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {loading ? "Sending..." : "Send Reset Link"}

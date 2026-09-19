@@ -4,15 +4,19 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { signOut } from "firebase/auth";
 import { Menu, X, ChevronDown, Download } from "lucide-react";
 import { Logo } from "./logo";
+import { UserMenu } from "./user-menu";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/firebase/auth-context";
+import { firebaseAuth } from "@/lib/firebase/client";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
   {
     label: "Scanner",
-    href: "/scanner",
+    href: "",
     menu: [
       { label: "URL Scanner", href: "/scanner/url" },
       { label: "File Scanner", href: "/scanner/file" },
@@ -36,17 +40,21 @@ const NAV_LINKS = [
   { label: "Pricing", href: "/pricing" },
 ];
 
+const AUTH_ONLY_LABELS = new Set(["Leaderboard", "Developers"]);
+
 function isLinkActive(pathname: string, link: (typeof NAV_LINKS)[number]): boolean {
   if (link.href === "/") return pathname === "/";
-  if (pathname === link.href || pathname.startsWith(`${link.href}/`)) return true;
+  if (link.href && (pathname === link.href || pathname.startsWith(`${link.href}/`))) return true;
   return link.menu?.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`)) ?? false;
 }
 
-export function Navbar() {
+export function Navbar({ showLogo = true }: { showLogo?: boolean }) {
   const pathname = usePathname();
+  const { user, loading } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const visibleLinks = NAV_LINKS.filter((link) => !AUTH_ONLY_LABELS.has(link.label) || (!loading && user));
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -63,10 +71,10 @@ export function Navbar() {
       )}
     >
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Logo />
+        {showLogo && <Logo />}
 
         <div className="hidden items-center xl:flex">
-          {NAV_LINKS.map((link) => {
+          {visibleLinks.map((link) => {
             const active = isLinkActive(pathname, link);
             return (
             <div
@@ -114,19 +122,25 @@ export function Navbar() {
         </div>
 
         <div className="hidden items-center gap-2 xl:flex">
-          <Link href="/login">
-            <Button variant="ghost" size="sm">
-              Login
-            </Button>
-          </Link>
-          <Link href="/download">
+          {/* <Link href="/download">
             <Button variant="subtle" size="sm">
               <Download className="h-3.5 w-3.5" /> App
             </Button>
-          </Link>
-          <Link href="/signup">
-            <Button size="sm">Get Started</Button>
-          </Link>
+          </Link> */}
+          {loading ? null : user ? (
+            <UserMenu user={user} className="ml-1" />
+          ) : (
+            <>
+              <Link href="/login">
+                <Button variant="ghost" size="sm">
+                  Login
+                </Button>
+              </Link>
+              <Link href="/signup">
+                <Button size="sm">Get Started</Button>
+              </Link>
+            </>
+          )}
         </div>
 
         <button
@@ -147,7 +161,7 @@ export function Navbar() {
             className="overflow-hidden border-t border-border-subtle bg-black/95 xl:hidden"
           >
             <div className="space-y-1 px-4 py-4">
-              {NAV_LINKS.map((link) => (
+              {visibleLinks.map((link) => (
                 <Link
                   key={link.label}
                   href={link.href}
@@ -162,14 +176,36 @@ export function Navbar() {
                 </Link>
               ))}
               <div className="mt-3 flex flex-col gap-2 border-t border-border-subtle pt-3">
-                <Link href="/login" onClick={() => setMobileOpen(false)}>
-                  <Button variant="outline" className="w-full">
-                    Login
-                  </Button>
-                </Link>
-                <Link href="/signup" onClick={() => setMobileOpen(false)}>
-                  <Button className="w-full">Get Started</Button>
-                </Link>
+                {!loading && user ? (
+                  <>
+                    <Link href="/dashboard" onClick={() => setMobileOpen(false)}>
+                      <Button variant="outline" className="w-full">
+                        Dashboard
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      className="w-full"
+                      onClick={async () => {
+                        await signOut(firebaseAuth);
+                        setMobileOpen(false);
+                      }}
+                    >
+                      Log out
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" onClick={() => setMobileOpen(false)}>
+                      <Button variant="outline" className="w-full">
+                        Login
+                      </Button>
+                    </Link>
+                    <Link href="/signup" onClick={() => setMobileOpen(false)}>
+                      <Button className="w-full">Get Started</Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>

@@ -1,6 +1,6 @@
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { PricingPreview } from "@/components/home/pricing-preview";
+import { LivePricingSection } from "@/components/pricing/live-pricing-section";
 
 export const metadata = { title: "Pricing" };
 
@@ -9,7 +9,7 @@ export default function PricingPage() {
     <>
       <Navbar />
       <main className="flex-1 bg-bg-black">
-        <PricingPreview />
+        <LivePricingSection />
       </main>
       <Footer />
     </>

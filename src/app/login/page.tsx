@@ -2,14 +2,26 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { Loader2 } from "lucide-react";
 import { AuthCard } from "@/components/auth/auth-card";
 import { SocialLogin } from "@/components/auth/social-login";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { firebaseAuth } from "@/lib/firebase/client";
+import { firebaseAuthErrorMessage } from "@/lib/firebase/errors";
+import { initUserAfterAuth } from "@/lib/firebase/init-user";
+import { safeNextPath } from "@/lib/utils";
+
+const googleProvider = new GoogleAuthProvider();
 
 export default function LoginPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const destination = safeNextPath(searchParams.get("next"));
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -17,11 +29,33 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    // Auth.js/NextAuth credentials sign-in wires in here once NEXTAUTH_SECRET
-    // and a database adapter are configured — see .env.example.
-    await new Promise((r) => setTimeout(r, 900));
-    setLoading(false);
-    setError("Authentication is not configured in this environment yet.");
+    const form = new FormData(e.currentTarget);
+    const email = String(form.get("email") ?? "");
+    const password = String(form.get("password") ?? "");
+
+    try {
+      const credential = await signInWithEmailAndPassword(firebaseAuth, email, password);
+      await initUserAfterAuth(credential.user);
+      router.push(destination);
+    } catch (err) {
+      setError(firebaseAuthErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setGoogleLoading(true);
+    setError(null);
+    try {
+      const credential = await signInWithPopup(firebaseAuth, googleProvider);
+      await initUserAfterAuth(credential.user);
+      router.push(destination);
+    } catch (err) {
+      setError(firebaseAuthErrorMessage(err));
+    } finally {
+      setGoogleLoading(false);
+    }
   }
 
   return (
@@ -37,7 +71,7 @@ export default function LoginPage() {
         </>
       }
     >
-      <SocialLogin />
+      <SocialLogin onGoogleClick={handleGoogleSignIn} loading={googleLoading} />
       <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-widest text-muted">
         <span className="h-px flex-1 bg-border-subtle" /> or <span className="h-px flex-1 bg-border-subtle" />
       </div>
@@ -63,7 +97,7 @@ export default function LoginPage() {
 
         {error && <p className="text-sm text-danger">{error}</p>}
 
-        <Button type="submit" className="w-full" size="lg" disabled={loading}>
+        <Button type="submit" className="w-full" size="lg" disabled={loading || googleLoading}>
           {loading && <Loader2 className="h-4 w-4 animate-spin" />}
           {loading ? "Signing in..." : "Log In"}
         </Button>

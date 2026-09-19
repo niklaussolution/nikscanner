@@ -1,5 +1,5 @@
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GithubIcon } from "@/components/ui/social-icons";
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -21,15 +21,11 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-export function SocialLogin() {
+export function SocialLogin({ onGoogleClick, loading }: { onGoogleClick: () => void; loading?: boolean }) {
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <Button variant="outline" className="w-full">
-        <GoogleIcon className="h-4 w-4" /> Google
-      </Button>
-      <Button variant="outline" className="w-full">
-        <GithubIcon className="h-4 w-4" /> GitHub
-      </Button>
-    </div>
+    <Button type="button" variant="outline" className="w-full" disabled={loading} onClick={onGoogleClick}>
+      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon className="h-4 w-4" />}
+      Continue with Google
+    </Button>
   );
 }

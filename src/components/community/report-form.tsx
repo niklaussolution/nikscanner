@@ -1,33 +1,41 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Link as LinkIcon, Lock, CheckCircle2, AlertTriangle, Loader2, ArrowRight, FileText } from "lucide-react";
-import { REPORT_CATEGORIES } from "@/lib/data/community";
+import Link from "next/link";
+import { Link as LinkIcon, Lock, CheckCircle2, AlertTriangle, Loader2, ArrowRight, FileText, LogIn } from "lucide-react";
+import { useAuth } from "@/lib/firebase/auth-context";
+import { authedJson } from "@/lib/firebase/api";
 
-const REASON_MAX = 500;
-
-const STEPS = [
-  { id: 1, label: "Details" },
-  { id: 2, label: "Evidence" },
-  { id: 3, label: "Review" },
+const REPORT_CATEGORIES = [
+  { value: "phishing", label: "Phishing" },
+  { value: "malicious", label: "Malicious" },
+  { value: "tracking", label: "Tracking" },
+  { value: "suspicious", label: "Suspicious" },
 ] as const;
 
 type FormState = "idle" | "submitting" | "success" | "error";
 
+interface ReportResult {
+  ok: true;
+  duplicate: boolean;
+  confirmed: boolean;
+  reporters: number;
+  points: number;
+  points_awarded: number;
+}
+
 export function ReportForm() {
+  const { user, loading: authLoading } = useAuth();
   const urlId = useId();
   const categoryId = useId();
-  const reasonId = useId();
-  const evidenceId = useId();
 
   const [url, setUrl] = useState("");
   const [category, setCategory] = useState("");
-  const [reason, setReason] = useState("");
-  const [evidence, setEvidence] = useState("");
   const [state, setState] = useState<FormState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [result, setResult] = useState<ReportResult | null>(null);
 
-  const isValid = url.trim().length > 0 && category.length > 0 && reason.trim().length >= 10;
+  const isValid = url.trim().length > 0 && category.length > 0;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -37,37 +45,60 @@ export function ReportForm() {
     setErrorMessage(null);
 
     try {
-      const res = await fetch("/api/reports/url", {
+      const data = await authedJson<ReportResult>("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url,
-          threatType: category,
-          reason,
-          evidence: evidence || undefined,
-        }),
+        body: JSON.stringify({ url, category }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to submit report.");
+      setResult(data);
       setState("success");
       setUrl("");
       setCategory("");
-      setReason("");
-      setEvidence("");
     } catch (err) {
       setState("error");
       setErrorMessage(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     }
   }
 
-  if (state === "success") {
+  if (authLoading) return null;
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-10 text-center">
+        <Lock className="h-10 w-10 text-[var(--text-muted)]" />
+        <h3 className="mt-4 font-heading text-lg font-bold text-[var(--text)]">Sign in to report a URL</h3>
+        <p className="mt-2 max-w-sm text-sm text-[var(--text-muted)]">
+          Reports are tied to your account so we can credit you and prevent abuse. Sign in or create a free account
+          to get started.
+        </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href="/login?next=/community"
+            className="flex h-11 min-h-[44px] items-center gap-2 rounded-lg bg-[var(--orange)] px-5 text-sm font-bold text-white"
+          >
+            <LogIn className="h-4 w-4" /> Log In
+          </Link>
+          <Link
+            href="/signup?next=/community"
+            className="flex h-11 min-h-[44px] items-center rounded-lg border border-[var(--border)] px-5 text-sm font-bold text-[var(--text)] transition-colors hover:border-[var(--orange)]/50"
+          >
+            Sign Up
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (state === "success" && result) {
     return (
       <div className="flex flex-col items-center rounded-2xl border border-[var(--green)]/30 bg-[var(--green)]/5 p-10 text-center">
         <CheckCircle2 className="h-10 w-10 text-[var(--green)]" />
         <h3 className="mt-4 font-heading text-lg font-bold text-[var(--text)]">Report submitted</h3>
         <p className="mt-2 max-w-sm text-sm text-[var(--text-muted)]">
-          Thanks — your report has entered the moderation queue. It only affects the target&apos;s public reputation
-          once verified.
+          {result.duplicate
+            ? "You'd already reported this URL — no duplicate points awarded."
+            : `Recorded to your account${result.points_awarded > 0 ? ` — +${result.points_awarded} community points` : ""}.`}{" "}
+          It only affects the target&apos;s public reputation once confirmed.
         </p>
         <button
           type="button"
@@ -92,35 +123,6 @@ export function ReportForm() {
             Help the community by reporting malicious or suspicious links.
           </p>
         </div>
-      </div>
-
-      {/* step indicator */}
-      <div className="mt-6 flex items-center" aria-label="Report progress">
-        {STEPS.map((step, i) => (
-          <div key={step.id} className="flex flex-1 items-center last:flex-none">
-            <div className="flex items-center gap-2">
-              <span
-                className={
-                  step.id === 1
-                    ? "flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--orange)] text-xs font-bold text-white"
-                    : "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[var(--border)] text-xs font-bold text-[var(--text-muted)]"
-                }
-              >
-                {step.id}
-              </span>
-              <span
-                className={
-                  step.id === 1
-                    ? "text-xs font-bold uppercase tracking-wide text-[var(--orange-light)]"
-                    : "text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]"
-                }
-              >
-                {step.label}
-              </span>
-            </div>
-            {i < STEPS.length - 1 && <span className="mx-3 h-px flex-1 bg-[var(--border)]" aria-hidden />}
-          </div>
-        ))}
       </div>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">
@@ -157,54 +159,20 @@ export function ReportForm() {
               Select a category
             </option>
             {REPORT_CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
+              <option key={c.value} value={c.value}>
+                {c.label}
               </option>
             ))}
           </select>
         </div>
 
-        <div>
-          <div className="mb-1.5 flex items-center justify-between">
-            <label htmlFor={reasonId} className="block text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
-              Reason <span className="text-[var(--orange)]">*</span>
-            </label>
-            <span className="text-[11px] text-[var(--text-muted)]">
-              {reason.length}/{REASON_MAX}
-            </span>
-          </div>
-          <textarea
-            id={reasonId}
-            required
-            minLength={10}
-            maxLength={REASON_MAX}
-            rows={4}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Describe why this URL is suspicious or malicious..."
-            className="w-full rounded-xl border border-[var(--border)] bg-black/30 px-4 py-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:border-[var(--orange)]/60 focus:outline-none focus:ring-2 focus:ring-[var(--orange)]/20"
-          />
-        </div>
-
-        <div>
-          <label htmlFor={evidenceId} className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
-            Evidence URL <span className="text-[var(--text-muted)] normal-case">(optional)</span>
-          </label>
-          <input
-            id={evidenceId}
-            type="text"
-            value={evidence}
-            onChange={(e) => setEvidence(e.target.value)}
-            placeholder="Link to screenshot or additional context (e.g. VirusTotal, WHOIS, etc.)"
-            className="h-11 min-h-[44px] w-full rounded-xl border border-[var(--border)] bg-black/30 px-4 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:border-[var(--orange)]/60 focus:outline-none focus:ring-2 focus:ring-[var(--orange)]/20"
-          />
-        </div>
-
         <div className="flex items-start gap-3 rounded-xl border border-[var(--border-soft)] bg-black/20 p-4">
           <Lock className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" />
           <div>
-            <p className="text-sm font-semibold text-[var(--text)]">Your report is anonymous and privacy protected.</p>
-            <p className="mt-0.5 text-xs text-[var(--text-muted)]">We don&apos;t store personal information, only threat data.</p>
+            <p className="text-sm font-semibold text-[var(--text)]">Recorded under your account.</p>
+            <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+              Used to credit your contribution and prevent abuse — never shown publicly.
+            </p>
           </div>
         </div>
 
@@ -233,7 +201,7 @@ export function ReportForm() {
             )}
           </button>
           <p className="mt-3 text-center text-xs text-[var(--text-muted)]">
-            Reports are reviewed before they affect reputation.
+            Reports are confirmed once enough of the community flags the same URL.
           </p>
         </div>
       </form>

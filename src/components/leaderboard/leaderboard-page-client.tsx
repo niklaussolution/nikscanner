@@ -9,7 +9,7 @@ import { LeaderboardIntro } from "@/components/leaderboard/leaderboard-intro";
 import { SeasonRow } from "@/components/leaderboard/season-row";
 import { CommunityMetrics } from "@/components/leaderboard/community-metrics";
 import { LeaderboardControls } from "@/components/leaderboard/leaderboard-controls";
-import { LeaderboardPodium } from "@/components/leaderboard/leaderboard-podium";
+import { RealLeaderboardPodium } from "@/components/leaderboard/real-leaderboard-podium";
 import { RankingsTable } from "@/components/leaderboard/rankings-table";
 import { Pagination } from "@/components/leaderboard/pagination";
 import { SeasonProgress } from "@/components/leaderboard/season-progress";
@@ -194,7 +194,7 @@ export function LeaderboardPageClient() {
 
           {pageState === "ready" && data && (
             <>
-              {page === 1 && data.users.length >= 3 && <LeaderboardPodium users={data.users.slice(0, 3)} />}
+              {page === 1 && <RealLeaderboardPodium />}
 
               <h2 className="mt-8 text-sm font-bold uppercase tracking-wide text-[var(--text-secondary)]">Global Rankings</h2>
               <RankingsTable users={data.users} />

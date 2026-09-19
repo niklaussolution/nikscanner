@@ -18,6 +18,7 @@ import { classifyPayload, isSafeToOpen, safeHostname, PAYLOAD_TYPE_LABEL, type Q
 import { looksConfusable, openSafely } from "@/components/scanner-qr/open-safely";
 import { QR_STAGES, type QrScanState } from "@/components/scanner-qr/types";
 import { THREAT_LEVEL_LABEL, type ScanResultPayload } from "@/types/scan";
+import { logScanIfSignedIn } from "@/lib/firebase/log-scan";
 import type { TlsInfo } from "@/lib/domain-intel/tls";
 
 if (typeof window !== "undefined") {
@@ -149,6 +150,7 @@ export function QrScannerWorkspace() {
       setTlsInfo(tls);
       setActiveStageIndex(4);
       setQrState(tls ? "complete" : "partial");
+      logScanIfSignedIn({ target: url, targetType: "qr", threatLevel: scanResult.threatLevel, score: scanResult.score });
 
       const isSafe = scanResult.threatLevel === "SAFE" || scanResult.threatLevel === "LOW_RISK";
       const verdictTone: RecentScanEntry["verdictTone"] = isSafe ? "safe" : "danger";
