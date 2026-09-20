@@ -5,7 +5,7 @@ import type { LucideIcon } from "lucide-react";
 
 export function ScannerIntro({
   pillIcon: PillIcon = LinkIcon,
-  pillText = "URL Scanner",
+  // pillText = "URL Scanner",
   headingPrefix = "Analyze any link ",
   headingHighlight = "before you click.",
   subtitle = "Reputation, SSL, redirect chains, domain age and phishing indicators — checked in seconds.",
@@ -18,13 +18,13 @@ export function ScannerIntro({
 }) {
   return (
     <div className="relative mx-auto max-w-3xl text-center">
-      <div
+      {/* <div
         data-intro-pill
         className="mx-auto inline-flex items-center gap-2 rounded-full border border-[var(--orange)]/40 bg-[var(--orange)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--orange-light)]"
       >
         <PillIcon className="h-3.5 w-3.5" />
         {pillText}
-      </div>
+      </div> */}
 
       <h1
         data-intro-heading

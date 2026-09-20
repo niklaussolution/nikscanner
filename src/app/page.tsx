@@ -1,3 +1,6 @@
+"use client";
+
+import { useAuth } from "@/lib/firebase/auth-context";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Hero } from "@/components/home/hero";
@@ -13,6 +16,8 @@ import { FaqSection } from "@/components/home/faq-section";
 import { FinalCta } from "@/components/home/final-cta";
 
 export default function Home() {
+  const { user } = useAuth();
+
   return (
     <>
       <Navbar />
@@ -27,7 +32,7 @@ export default function Home() {
         <DeveloperSection />
         <PricingPreview />
         <FaqSection />
-        <FinalCta />
+        {!user && <FinalCta />}
       </main>
       <Footer />
     </>

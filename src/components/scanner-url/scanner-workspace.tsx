@@ -18,7 +18,7 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-const DEFAULT_URL = "https://example.com/suspicious-login";
+// const DEFAULT_URL = "https://example.com/suspicious-login";
 const STAGE_INTERVAL_MS = 850;
 
 function defaultCards(): AnalysisCardData[] {
@@ -82,7 +82,7 @@ export function ScannerWorkspace() {
   const quickY = useRef<gsap.QuickToFunc | null>(null);
   const stageTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const [value, setValue] = useState(DEFAULT_URL);
+  const [value, setValue] = useState("");
   const [scanState, setScanState] = useState<ScanState>("idle");
   const [activeStageIndex, setActiveStageIndex] = useState(0);
   const [cards, setCards] = useState<AnalysisCardData[]>(defaultCards());

@@ -345,7 +345,7 @@ export function ApiPlayground() {
               </div>
             </div>
 
-            <button
+            {/* <button
               ref={runBtnRef}
               type="button"
               onMouseMove={handleRunMove}
@@ -358,7 +358,7 @@ export function ApiPlayground() {
               <span className="text-center text-[11px] font-bold uppercase leading-tight tracking-wide">
                 {runState === "loading" ? "Running..." : "Run Request →"}
               </span>
-            </button>
+            </button> */}
           </div>
 
           {/* response panel */}
