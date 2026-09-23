@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { AlertTriangle, Archive, FileCog, FileText, Hash, Activity, ShieldCheck } from "lucide-react";
+import { AlertTriangle, FileCog, FileText, Hash, Activity, ShieldCheck, Cpu } from "lucide-react";
 import { ScannerTabs } from "@/components/scanner-url/scanner-tabs";
 import { ScanProgressRail } from "@/components/scanner-url/scan-progress-rail";
 import { AnalysisCards } from "@/components/scanner-url/analysis-cards";
-import { ScanEngineRadar } from "@/components/scanner-url/scan-engine-radar";
+import { ScanEngineRadar, type RadarStatusRow } from "@/components/scanner-url/scan-engine-radar";
 import { RecentScans, type RecentScanEntry } from "@/components/scanner-url/recent-scans";
 import type { AnalysisCardData } from "@/components/scanner-url/types";
 import { FileDropzone } from "@/components/scanner-file/file-dropzone";
@@ -17,6 +17,16 @@ import { validateFileMeta, sniffMatchesExtension, hashFileSHA256, formatBytes, g
 import { fileTypeLabel } from "@/components/scanner-file/file-analysis";
 import { THREAT_LEVEL_LABEL, type ScanResultPayload } from "@/types/scan";
 import { logScanIfSignedIn } from "@/lib/firebase/log-scan";
+import { runLocalFileScan } from "@/lib/file-scan/local-scan";
+import { runMlScan, supportsMlScan, type MlScanResult } from "@/lib/firebase/ml-scan";
+import { consumeCredit } from "@/lib/firebase/credits";
+import { Toast } from "@/components/ui/toast";
+import { useAuth } from "@/lib/firebase/auth-context";
+import { authedJson } from "@/lib/firebase/api";
+import type { CreditsBalanceResult } from "@/lib/firebase/nikscanner-types";
+import { useRouter } from "next/navigation";
+import { fetchRecentScans } from "@/lib/firebase/scan-history";
+import { formatRelativeTime } from "@/lib/format-time";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -24,18 +34,13 @@ if (typeof window !== "undefined") {
 
 const STAGE_INTERVAL_MS = 850;
 
-const INITIAL_RECENT_FILE_SCANS: RecentScanEntry[] = [
-  { id: "1", icon: FileText, primary: "invoice_2026.pdf", secondary: "1.8 MB • PDF", verdict: "CLEAN", verdictTone: "safe", time: "2m ago" },
-  { id: "2", icon: FileCog, primary: "system_patch.exe", secondary: "12.4 MB • EXE", verdict: "MALWARE", verdictTone: "danger", time: "21m ago" },
-  { id: "3", icon: Archive, primary: "nikscanner.apk", secondary: "8.7 MB • APK", verdict: "CLEAN", verdictTone: "safe", time: "1h ago" },
-];
-
 function defaultCards(fileName?: string): AnalysisCardData[] {
   return [
     { id: "hash", icon: Hash, title: "File Hash", value: "SHA-256 ready", tone: "neutral" },
     { id: "filetype", icon: FileText, title: "File Type", value: fileName ? fileTypeLabel(fileName) : "No file yet", tone: "neutral" },
     { id: "signatures", icon: ShieldCheck, title: "Malware Signatures", value: "Awaiting scan", tone: "neutral" },
-    { id: "behavior", icon: Activity, title: "Behavior Analysis", value: "Sandbox standby", tone: "neutral" },
+    { id: "behavior", icon: Activity, title: "Behavior Analysis", value: "Sandbox standby", tone: "neutral", featured: true },
+    { id: "ml", icon: Cpu, title: "ML Classifier", value: "Awaiting scan", tone: "neutral", featured: true },
   ];
 }
 
@@ -45,7 +50,31 @@ function toneForThreatLevel(threatLevel: ScanResultPayload["threatLevel"]): Anal
   return "danger";
 }
 
-function computeResultCards(result: ScanResultPayload, file: File, sha256: string): AnalysisCardData[] {
+function mlCard(mlResult: MlScanResult | null): AnalysisCardData {
+  if (!mlResult || mlResult.status === "unsupported") {
+    return { id: "ml", icon: Cpu, title: "ML Classifier", value: "Not available for this file type", tone: "neutral", featured: true };
+  }
+  if (mlResult.status === "not-signed-in") {
+    return { id: "ml", icon: Cpu, title: "ML Classifier", value: "Sign in to run ML classification", tone: "neutral", featured: true };
+  }
+  if (mlResult.status === "not-a-pe") {
+    return { id: "ml", icon: Cpu, title: "ML Classifier", value: "Not a valid PE file", tone: "danger", featured: true };
+  }
+  if (mlResult.status === "failed") {
+    return { id: "ml", icon: Cpu, title: "ML Classifier", value: "Classification failed", tone: "neutral", featured: true };
+  }
+  const pct = typeof mlResult.probability === "number" ? `${(mlResult.probability * 100).toFixed(1)}%` : "";
+  return {
+    id: "ml",
+    icon: Cpu,
+    title: "ML Classifier (EMBER2024)",
+    value: `${mlResult.verdict ?? "unknown"}${pct ? ` (${pct})` : ""}`,
+    tone: mlResult.verdict === "malicious" ? "danger" : mlResult.verdict === "suspicious" ? "neutral" : "safe",
+    featured: true,
+  };
+}
+
+function computeResultCards(result: ScanResultPayload, file: File, sha256: string, mlResult: MlScanResult | null): AnalysisCardData[] {
   const cleanCount = result.engines.filter((e) => e.verdict === "clean").length;
   const detectedCount = result.engines.filter((e) => e.verdict === "detected").length;
 
@@ -65,11 +94,15 @@ function computeResultCards(result: ScanResultPayload, file: File, sha256: strin
       title: "Behavior Analysis",
       value: THREAT_LEVEL_LABEL[result.threatLevel],
       tone: toneForThreatLevel(result.threatLevel),
+      featured: true,
     },
+    mlCard(mlResult),
   ];
 }
 
 export function FileScannerWorkspace() {
+  const router = useRouter();
+  const { user } = useAuth();
   const rootRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
   const quickX = useRef<gsap.QuickToFunc | null>(null);
@@ -85,7 +118,47 @@ export function FileScannerWorkspace() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [demoResult, setDemoResult] = useState(false);
-  const [recentScans, setRecentScans] = useState<RecentScanEntry[]>(INITIAL_RECENT_FILE_SCANS);
+  const [showCreditsToast, setShowCreditsToast] = useState(false);
+  const [recentScans, setRecentScans] = useState<RecentScanEntry[]>([]);
+  const [balance, setBalance] = useState<CreditsBalanceResult | null>(null);
+
+  const refreshBalance = useCallback(() => {
+    if (!user) return;
+    authedJson<CreditsBalanceResult>("/api/credits/balance")
+      .then((res) => setBalance(res))
+      .catch(() => {
+        // Non-fatal — the file-scan-limit display just won't show until this succeeds.
+      });
+  }, [user]);
+
+  useEffect(() => {
+    refreshBalance();
+  }, [refreshBalance]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    fetchRecentScans("file").then((scans) => {
+      if (cancelled) return;
+      setRecentScans(
+        scans.map((s) => {
+          const isSafe = s.threat_level === "SAFE" || s.threat_level === "LOW_RISK";
+          return {
+            id: s.id,
+            icon: FileText,
+            primary: s.target,
+            secondary: `${getExtension(s.target).slice(1).toUpperCase() || "FILE"} · ${s.score} score`,
+            verdict: isSafe ? "CLEAN" : "MALWARE",
+            verdictTone: isSafe ? "safe" : "danger",
+            time: formatRelativeTime(s.created_at),
+          };
+        }),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -194,8 +267,27 @@ export function FileScannerWorkspace() {
     if (!file || !sha256 || hashStatus !== "ready") return;
 
     setErrorMessage(null);
+    // Loading state takes effect the instant the button is clicked, not once the (async)
+    // credit check resolves — the button should never look inert while a network call is in
+    // flight underneath it.
     setFileScanState("uploading");
     setActiveStageIndex(0);
+
+    // Every file scan draws down file_scans_allowed/file_scans_used (server-decided, matching
+    // the Firebase user doc's own fields) — deducted once, up front, for every file type, not
+    // just the ML-eligible ones.
+    try {
+      const consume = await consumeCredit("file_scan");
+      if (!consume.allowed) {
+        setFileScanState("selected");
+        setShowCreditsToast(true);
+        return;
+      }
+    } catch (e) {
+      setFileScanState("error");
+      setErrorMessage(e instanceof Error ? e.message : "Could not check your scan credits.");
+      return;
+    }
 
     let i = 0;
     stageTimerRef.current = setInterval(() => {
@@ -209,36 +301,55 @@ export function FileScannerWorkspace() {
     }, STAGE_INTERVAL_MS);
 
     const stageTimerDone = new Promise<void>((resolve) => setTimeout(resolve, STAGE_INTERVAL_MS * (FILE_STAGES.length - 1)));
+    const ext = getExtension(file.name);
 
     try {
-      const fetchPromise = fetch("/api/scan/file", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetType: "file", sha256, fileName: file.name, fileSize: file.size }),
-      }).then(async (res) => {
+      const scanPromise = (async () => {
+        // Both run entirely client-side against the raw file — only their small summaries
+        // (a verdict, a probability) ever get POSTed onward, matching the "file never leaves
+        // your device" promise this scanner already makes for hashing.
+        const [localScan, mlResult] = await Promise.all([
+          runLocalFileScan(file),
+          supportsMlScan(ext) ? runMlScan(file, ext) : Promise.resolve<MlScanResult>({ status: "unsupported" }),
+        ]);
+
+        const res = await fetch("/api/scan/file", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            targetType: "file",
+            sha256,
+            fileName: file.name,
+            fileSize: file.size,
+            localSignatureVerdict: localScan.verdict,
+            localSignatureDetail: localScan.matches[0]?.detail,
+            ...(mlResult.status === "scored" ? { mlVerdict: mlResult.verdict, mlProbability: mlResult.probability } : {}),
+          }),
+        });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Scan failed.");
-        return data as ScanResultPayload;
-      });
+        return { result: data as ScanResultPayload, mlResult };
+      })();
 
-      const [result] = await Promise.all([fetchPromise, stageTimerDone]);
+      const [{ result, mlResult }] = await Promise.all([scanPromise, stageTimerDone]);
 
       if (stageTimerRef.current) clearInterval(stageTimerRef.current);
       setActiveStageIndex(FILE_STAGES.length - 1);
-      setCards(computeResultCards(result, file, sha256));
+      setCards(computeResultCards(result, file, sha256, mlResult));
       setDemoResult(result.demo);
       setFileScanState("complete");
       logScanIfSignedIn({ target: file.name, targetType: "file", threatLevel: result.threatLevel, score: result.score });
+      refreshBalance();
 
       const isSafe = result.threatLevel === "SAFE" || result.threatLevel === "LOW_RISK";
       const verdictTone: RecentScanEntry["verdictTone"] = isSafe ? "safe" : "danger";
-      const ext = getExtension(file.name).slice(1).toUpperCase();
+      const extLabel = ext.slice(1).toUpperCase();
       setRecentScans((prev) => [
         {
           id: result.id,
           icon: FileText,
           primary: file.name,
-          secondary: `${formatBytes(file.size)} • ${ext}`,
+          secondary: `${formatBytes(file.size)} • ${extLabel}`,
           verdict: isSafe ? "CLEAN" : "MALWARE",
           verdictTone,
           time: "Just now",
@@ -254,6 +365,22 @@ export function FileScannerWorkspace() {
 
   const railState = fileScanState === "uploading" || fileScanState === "scanning" ? "scanning" : fileScanState === "complete" ? "complete" : fileScanState === "error" ? "error" : "idle";
   const dropzoneDisabled = fileScanState === "uploading" || fileScanState === "scanning";
+
+  const radarStatusRows: RadarStatusRow[] = [
+    { icon: Hash, label: "Signature engines", value: "Connected", tone: "safe" },
+    { icon: Activity, label: "Sandbox", value: "Standby", tone: "neutral" },
+    { icon: ShieldCheck, label: "Privacy", value: "No storage", tone: "safe" },
+    ...(balance
+      ? [
+          {
+            icon: FileCog,
+            label: "File scans left",
+            value: `${Math.max(balance.file_scans_allowed - balance.file_scans_used, 0)} / ${balance.file_scans_allowed}`,
+            tone: balance.file_scans_used >= balance.file_scans_allowed ? ("danger" as const) : ("neutral" as const),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <>
@@ -314,11 +441,7 @@ export function FileScannerWorkspace() {
               title="Malware Engine"
               centerIcon={FileText}
               scanningLabel="Analyzing File"
-              statusRows={[
-                { icon: Hash, label: "Signature engines", value: "Connected", tone: "safe" },
-                { icon: Activity, label: "Sandbox", value: "Standby", tone: "neutral" },
-                { icon: ShieldCheck, label: "Privacy", value: "No storage", tone: "safe" },
-              ]}
+              statusRows={radarStatusRows}
               footerText="Your file hash is generated locally."
             />
             {demoResult && fileScanState === "complete" && (
@@ -331,6 +454,14 @@ export function FileScannerWorkspace() {
       </div>
 
       <RecentScans scans={recentScans} title="Recent File Scans" />
+
+      {showCreditsToast && (
+        <Toast
+          message="Credits over"
+          action={{ label: "Upgrade", onClick: () => router.push("/dashboard/billing") }}
+          onDismiss={() => setShowCreditsToast(false)}
+        />
+      )}
     </>
   );
 }

@@ -10,11 +10,41 @@ const TONE_TEXT: Record<AnalysisCardData["tone"], string> = {
   danger: "text-[var(--danger)]",
 };
 
-export function AnalysisCards({ cards }: { cards: AnalysisCardData[] }) {
+const FEATURED_TONE_GLOW: Record<AnalysisCardData["tone"], string> = {
+  neutral: "border-[var(--orange)]/50 shadow-[0_0_0_1px_rgba(255,90,0,0.15),0_8px_24px_-8px_rgba(255,90,0,0.35)]",
+  safe: "border-[var(--safe)]/50 shadow-[0_0_0_1px_rgba(34,197,94,0.15),0_8px_24px_-8px_rgba(34,197,94,0.35)]",
+  danger: "border-[var(--danger)]/60 shadow-[0_0_0_1px_rgba(239,68,68,0.2),0_8px_24px_-8px_rgba(239,68,68,0.5)]",
+};
+
+export function AnalysisCards({ cards, trailing }: { cards: AnalysisCardData[]; trailing?: React.ReactNode }) {
   return (
     <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
       {cards.map((card) => {
         const Icon = card.icon;
+        if (card.featured) {
+          return (
+            <button
+              key={card.id}
+              type="button"
+              data-analysis-card
+              className={cn(
+                "group flex items-center justify-between gap-2 rounded-xl border bg-[var(--surface-soft)] p-5 text-left transition-all duration-200 hover:-translate-y-1 sm:col-span-2",
+                FEATURED_TONE_GLOW[card.tone],
+              )}
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--orange)]/30 bg-[var(--orange)]/10 text-[var(--orange-light)]">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold uppercase tracking-wide text-[var(--white)]">{card.title}</p>
+                  <p className={cn("mt-0.5 truncate text-lg font-extrabold", TONE_TEXT[card.tone])}>{card.value}</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform group-hover:translate-x-0.5" />
+            </button>
+          );
+        }
         return (
           <button
             key={card.id}
@@ -35,6 +65,11 @@ export function AnalysisCards({ cards }: { cards: AnalysisCardData[] }) {
           </button>
         );
       })}
+      {trailing && (
+        <div className="flex items-stretch sm:col-span-2 xl:col-span-2" data-analysis-card>
+          {trailing}
+        </div>
+      )}
     </div>
   );
 }

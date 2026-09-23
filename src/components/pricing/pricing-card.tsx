@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -10,11 +10,27 @@ export interface PricingTier {
   description: string;
   features: string[];
   cta: string;
-  href: string;
+  /** Navigates when set (signed-out visitors — send them to sign up first). */
+  href?: string;
+  /** Runs the checkout flow directly when set (signed-in visitors) — takes priority over href. */
+  onClick?: () => void;
+  loading?: boolean;
   highlighted?: boolean;
 }
 
 export function PricingCard({ tier }: { tier: PricingTier }) {
+  const button = (
+    <Button className="w-full" variant={tier.highlighted ? "primary" : "outline"} disabled={tier.loading} onClick={tier.onClick}>
+      {tier.loading ? (
+        <span className="flex items-center justify-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" /> Processing...
+        </span>
+      ) : (
+        tier.cta
+      )}
+    </Button>
+  );
+
   return (
     <div
       className={cn(
@@ -45,11 +61,13 @@ export function PricingCard({ tier }: { tier: PricingTier }) {
         ))}
       </ul>
 
-      <Link href={tier.href} className="mt-6">
-        <Button className="w-full" variant={tier.highlighted ? "primary" : "outline"}>
-          {tier.cta}
-        </Button>
-      </Link>
+      {tier.onClick ? (
+        <div className="mt-6">{button}</div>
+      ) : (
+        <Link href={tier.href ?? "/signup"} className="mt-6">
+          {button}
+        </Link>
+      )}
     </div>
   );
 }

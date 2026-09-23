@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { ReportForm } from "@/components/community/report-form";
 import { CommunitySidebar } from "@/components/community/community-sidebar";
 
 if (typeof window !== "undefined") {
@@ -27,22 +26,11 @@ export function CommunityWorkspace() {
 
     const ctx = gsap.context(() => {
       gsap.fromTo(
-        "[data-workspace-form]",
-        { opacity: 0, x: -24 },
-        {
-          opacity: 1,
-          x: 0,
-          duration: reduced ? 0 : 0.6,
-          ease: "power2.out",
-          scrollTrigger: { trigger: root, start: "top 78%", once: true },
-        },
-      );
-      gsap.fromTo(
         "[data-workspace-sidebar]",
-        { opacity: 0, x: 24 },
+        { opacity: 0, y: 16 },
         {
           opacity: 1,
-          x: 0,
+          y: 0,
           duration: reduced ? 0 : 0.6,
           ease: "power2.out",
           scrollTrigger: { trigger: root, start: "top 78%", once: true },
@@ -78,10 +66,7 @@ export function CommunityWorkspace() {
           } as React.CSSProperties
         }
       />
-      <div className="relative z-10 grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <div data-workspace-form className="lg:col-span-7">
-          <ReportForm />
-        </div>
+      <div className="relative z-10">
         <CommunitySidebar />
       </div>
     </div>

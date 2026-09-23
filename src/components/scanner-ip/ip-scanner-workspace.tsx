@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { AlertTriangle, MapPin, Network, ShieldCheck, Ghost, Wifi } from "lucide-react";
+import { AlertTriangle, MapPin, Network, ShieldCheck, Ghost, Wifi, Globe } from "lucide-react";
 import { ScannerTabs } from "@/components/scanner-url/scanner-tabs";
 import { ScanProgressRail } from "@/components/scanner-url/scan-progress-rail";
 import { ResultSummary, type ResultSummaryData } from "@/components/scanner-url/result-summary";
@@ -11,11 +11,15 @@ import { StatusCards, type StatusCardData } from "@/components/scanner-url/statu
 import { IpInput } from "@/components/scanner-ip/ip-input";
 import { IpIntelligenceMap, type MapStatusRow } from "@/components/scanner-ip/ip-intelligence-map";
 import { ReputationSources } from "@/components/scanner-url/reputation-sources";
-import { RecentIpScans, INITIAL_RECENT_IPS } from "@/components/scanner-ip/recent-ip-scans";
-import { IP_STAGES, type IpScanState, type RecentIpEntry } from "@/components/scanner-ip/types";
+import { RecentScans, type RecentScanEntry } from "@/components/scanner-url/recent-scans";
+import { BlockTargetButton } from "@/components/scanner-url/block-target-button";
+import { IP_STAGES, type IpScanState } from "@/components/scanner-ip/types";
 import { normalizeAndValidateIp } from "@/lib/validation/ip";
 import { THREAT_LEVEL_LABEL, type IpScanPayload } from "@/types/scan";
 import { logScanIfSignedIn } from "@/lib/firebase/log-scan";
+import { useAuth } from "@/lib/firebase/auth-context";
+import { fetchRecentScans } from "@/lib/firebase/scan-history";
+import { formatRelativeTime } from "@/lib/format-time";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -101,13 +105,12 @@ function buildMapStatusRows(payload: IpScanPayload | null): MapStatusRow[] {
   ];
 }
 
-function verdictForRecent(payload: IpScanPayload): RecentIpEntry["verdict"] {
-  if (payload.score < 30) return "SAFE";
-  if (payload.score < 60) return "SUSPICIOUS";
-  return "HIGH RISK";
+function isSafeIp(payload: IpScanPayload): boolean {
+  return payload.threatLevel === "SAFE" || payload.threatLevel === "LOW_RISK";
 }
 
 export function IpScannerWorkspace() {
+  const { user } = useAuth();
   const rootRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
   const quickX = useRef<gsap.QuickToFunc | null>(null);
@@ -120,7 +123,32 @@ export function IpScannerWorkspace() {
   const [result, setResult] = useState<IpScanPayload | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [recentIps, setRecentIps] = useState<RecentIpEntry[]>(INITIAL_RECENT_IPS);
+  const [recentIps, setRecentIps] = useState<RecentScanEntry[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    fetchRecentScans("ip").then((scans) => {
+      if (cancelled) return;
+      setRecentIps(
+        scans.map((s) => {
+          const isSafe = s.threat_level === "SAFE" || s.threat_level === "LOW_RISK";
+          return {
+            id: s.id,
+            icon: Globe,
+            primary: s.target,
+            secondary: `Score ${s.score}/100`,
+            verdict: isSafe ? "SAFE" : "RISKY",
+            verdictTone: isSafe ? "safe" : "danger",
+            time: formatRelativeTime(s.created_at),
+          };
+        }),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -220,17 +248,16 @@ export function IpScannerWorkspace() {
       setScanState(payload.partial ? "partial" : "complete");
       logScanIfSignedIn({ target: payload.target, targetType: "ip", threatLevel: payload.threatLevel, score: payload.score });
 
-      setRecentIps((prev) => [
-        {
-          id: payload.id,
-          ip: payload.target,
-          label: payload.network?.isp ?? payload.network?.org ?? "Unknown network",
-          verdict: verdictForRecent(payload),
-          verdictTone: verdictToneFromScore(payload.score),
-          time: "Just now",
-        },
-        ...prev,
-      ].slice(0, 3));
+      const entry: RecentScanEntry = {
+        id: payload.id,
+        icon: Globe,
+        primary: payload.target,
+        secondary: `Score ${payload.score}/100`,
+        verdict: isSafeIp(payload) ? "SAFE" : "RISKY",
+        verdictTone: isSafeIp(payload) ? "safe" : "danger",
+        time: "Just now",
+      };
+      setRecentIps((prev) => [entry, ...prev].slice(0, 3));
     } catch (e) {
       if (stageTimerRef.current) clearInterval(stageTimerRef.current);
       setScanState("error");
@@ -304,6 +331,19 @@ export function IpScannerWorkspace() {
                 <ResultSummary data={buildResultSummary(result)} emptyLabel="Run a scan to see the address's risk score and verdict." />
               )}
               {result && (scanState === "complete" || scanState === "partial") && <StatusCards cards={buildCards(result)} />}
+
+              {result && (scanState === "complete" || scanState === "partial") && !isSafeIp(result) && (
+                <div className="mt-4">
+                  <BlockTargetButton
+                    key={result.id}
+                    target={`https://${result.family === 6 ? `[${result.target}]` : result.target}`}
+                    blocklistHit={result.blocklistHit}
+                    blockedBy={result.blockedBy}
+                    suggestedCategory={result.threatLevel === "MALICIOUS" ? "malicious" : "suspicious"}
+                    targetLabel="IP Address"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -319,7 +359,7 @@ export function IpScannerWorkspace() {
       </div>
 
       {result && (scanState === "complete" || scanState === "partial") && <ReputationSources engines={result.engines} />}
-      <RecentIpScans scans={recentIps} />
+      <RecentScans scans={recentIps} title="Recent IP Scans" />
     </>
   );
 }

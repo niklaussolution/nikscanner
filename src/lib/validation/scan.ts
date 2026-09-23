@@ -29,6 +29,13 @@ export const fileScanRequestSchema = z.object({
     .int()
     .positive()
     .max(32 * 1024 * 1024),
+  // Results of the client-side signature scan (byte-pattern + zip-entry walk) and, for
+  // APK/PDF, the real EMBER2024 ML classification — computed entirely in the browser from the
+  // raw file, which is never uploaded. Only these small summaries cross the wire.
+  localSignatureVerdict: z.enum(["clean", "detected"]).optional(),
+  localSignatureDetail: z.string().max(500).optional(),
+  mlVerdict: z.enum(["clean", "suspicious", "malicious"]).optional(),
+  mlProbability: z.number().min(0).max(1).optional(),
 });
 
 export type FileScanRequest = z.infer<typeof fileScanRequestSchema>;

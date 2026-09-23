@@ -17,7 +17,7 @@ export function FinalCta() {
               Get Started Free <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
-          <Link href="/scanner">
+          <Link href="/scanner/url">
             <Button size="lg" variant="outline">
               Try the Scanner
             </Button>

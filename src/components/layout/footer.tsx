@@ -14,15 +14,6 @@ const COLUMNS = [
     ],
   },
   {
-    title: "Developers",
-    links: [
-      { label: "API", href: "/api" },
-      { label: "Documentation", href: "/docs" },
-      { label: "SDKs", href: "/docs#sdks" },
-      { label: "System Status", href: "/status" },
-    ],
-  },
-  {
     title: "Company",
     links: [
       { label: "About", href: "/about" },
@@ -52,7 +43,7 @@ export function Footer() {
   return (
     <footer className="border-t border-border-subtle bg-secondary-dark">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-10 sm:grid-cols-4 lg:grid-cols-5">
           <div className="col-span-2 lg:col-span-2">
             <Logo />
             <p className="mt-4 max-w-xs text-sm text-muted">

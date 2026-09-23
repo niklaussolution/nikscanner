@@ -86,7 +86,7 @@ export function CommunityHero() {
       />
 
       {/* corner micro-labels */}
-      <span data-hero-in className="absolute left-4 top-6 hidden rounded-md border border-[var(--border)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] sm:block lg:left-8">
+      {/* <span data-hero-in className="absolute left-4 top-6 hidden rounded-md border border-[var(--border)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] sm:block lg:left-8">
         A safer internet
       </span>
       <span data-hero-in className="absolute right-4 top-6 hidden rounded-md border border-[var(--border)] px-2.5 py-1 text-right text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] sm:block lg:right-8">
@@ -97,16 +97,16 @@ export function CommunityHero() {
       </span>
       <span data-hero-in className="absolute left-4 top-20 hidden rounded-md border border-[var(--border)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] sm:block lg:left-8">
         Community intelligence
-      </span>
+      </span> */}
 
       <div className="relative z-10 mx-auto max-w-2xl text-center">
-        <div
+        {/* <div
           data-hero-in
           className="mx-auto inline-flex items-center gap-2 rounded-full border border-[var(--orange)]/40 bg-[var(--orange)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--orange-light)]"
         >
           <Users className="h-3.5 w-3.5" />
           Community Intelligence
-        </div>
+        </div> */}
 
         <h1
           data-hero-in

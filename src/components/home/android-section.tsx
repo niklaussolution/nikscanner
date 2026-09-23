@@ -18,6 +18,8 @@ import {
   Clock,
   Radio,
   X,
+  File,
+  FileTextIcon
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PrimaryPhone } from "@/components/mobile/primary-phone";
@@ -35,9 +37,9 @@ const FEATURES: { icon: LucideIcon; label: string }[] = [
   { icon: ShieldCheck, label: "URL Protection" },
   { icon: QrCode, label: "QR Scanner" },
   { icon: FileText, label: "APK Analysis" },
-  { icon: Bell, label: "Realtime Alerts" },
+  { icon: FileTextIcon, label: "Word/Docs Scanning" },
+  { icon: File, label: "PDF Scan" },
   { icon: Smartphone, label: "Device Security" },
-  { icon: Moon, label: "Dark Mode" },
 ];
 
 function FeatureChip({ feature }: { feature: (typeof FEATURES)[number] }) {

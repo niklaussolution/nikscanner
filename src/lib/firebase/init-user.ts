@@ -8,12 +8,13 @@ const NIKSCANNER_API_BASE_URL = process.env.NEXT_PUBLIC_NIKSCANNER_API_BASE_URL 
  * exist" pattern. Best-effort: a failure here shouldn't block the user from reaching the app —
  * the same call fires again next sign-in.
  */
-export async function initUserAfterAuth(user: User): Promise<void> {
+export async function initUserAfterAuth(user: User, country?: string): Promise<void> {
   try {
     const idToken = await user.getIdToken();
     await fetch(`${NIKSCANNER_API_BASE_URL.replace(/\/+$/, "")}/api/user/init`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${idToken}` },
+      headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ country: country || null }),
     });
   } catch {
     // Non-fatal — credits provisioning will retry on the next sign-in.

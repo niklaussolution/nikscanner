@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Clock, Globe, Code, ArrowRight } from "lucide-react";
+import { Clock, ArrowRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,36 +14,6 @@ export interface RecentScanEntry {
   verdictTone: "safe" | "danger";
   time: string;
 }
-
-export const INITIAL_RECENT_SCANS: RecentScanEntry[] = [
-  {
-    id: "1",
-    icon: Globe,
-    primary: "docs.google.com",
-    secondary: "https://docs.google.com",
-    verdict: "SAFE",
-    verdictTone: "safe",
-    time: "2m ago",
-  },
-  {
-    id: "2",
-    icon: Globe,
-    primary: "secure-login-check.xyz",
-    secondary: "https://secure-login-check.xyz",
-    verdict: "PHISHING",
-    verdictTone: "danger",
-    time: "18m ago",
-  },
-  {
-    id: "3",
-    icon: Code,
-    primary: "github.com",
-    secondary: "https://github.com",
-    verdict: "SAFE",
-    verdictTone: "safe",
-    time: "1h ago",
-  },
-];
 
 export function RecentScans({
   scans,

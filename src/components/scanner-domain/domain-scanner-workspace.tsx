@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { AlertTriangle, Calendar, Database, Mail, ShieldAlert, Shield, Server, Activity } from "lucide-react";
+import { AlertTriangle, Calendar, Database, Mail, ShieldAlert, Shield, Server, Activity, Globe } from "lucide-react";
 import { ScannerTabs } from "@/components/scanner-url/scanner-tabs";
 import { ScanProgressRail } from "@/components/scanner-url/scan-progress-rail";
 import { DomainInput } from "@/components/scanner-domain/domain-input";
@@ -11,11 +11,15 @@ import { ResultSummary, type ResultSummaryData } from "@/components/scanner-url/
 import { StatusCards, type StatusCardData } from "@/components/scanner-url/status-cards";
 import { DomainIntelligenceRadar, type RadarStatusRow } from "@/components/scanner-domain/domain-intelligence-radar";
 import { DnsSecurityRecords } from "@/components/scanner-domain/dns-security-records";
-import { RecentDomains, INITIAL_RECENT_DOMAINS } from "@/components/scanner-domain/recent-domains";
-import { DOMAIN_STAGES, type DomainScanState, type RecentDomainEntry } from "@/components/scanner-domain/types";
+import { RecentScans, type RecentScanEntry } from "@/components/scanner-url/recent-scans";
+import { DOMAIN_STAGES, type DomainScanState } from "@/components/scanner-domain/types";
 import { normalizeAndValidateDomain } from "@/lib/validation/domain";
 import { THREAT_LEVEL_LABEL, type DomainScanPayload } from "@/types/scan";
 import { logScanIfSignedIn } from "@/lib/firebase/log-scan";
+import { useAuth } from "@/lib/firebase/auth-context";
+import { fetchRecentScans } from "@/lib/firebase/scan-history";
+import { formatRelativeTime } from "@/lib/format-time";
+import { BlockTargetButton } from "@/components/scanner-url/block-target-button";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -105,13 +109,12 @@ function buildRadarStatusRows(payload: DomainScanPayload | null): RadarStatusRow
   ];
 }
 
-function verdictForRecent(payload: DomainScanPayload): RecentDomainEntry["verdict"] {
-  if (payload.score < 30) return "SAFE";
-  if (payload.score < 60) return "SUSPICIOUS";
-  return "HIGH RISK";
+function isSafeDomain(payload: DomainScanPayload): boolean {
+  return payload.threatLevel === "SAFE" || payload.threatLevel === "LOW_RISK";
 }
 
 export function DomainScannerWorkspace() {
+  const { user } = useAuth();
   const rootRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
   const quickX = useRef<gsap.QuickToFunc | null>(null);
@@ -124,7 +127,32 @@ export function DomainScannerWorkspace() {
   const [result, setResult] = useState<DomainScanPayload | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [recentDomains, setRecentDomains] = useState<RecentDomainEntry[]>(INITIAL_RECENT_DOMAINS);
+  const [recentDomains, setRecentDomains] = useState<RecentScanEntry[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    fetchRecentScans("domain").then((scans) => {
+      if (cancelled) return;
+      setRecentDomains(
+        scans.map((s) => {
+          const isSafe = s.threat_level === "SAFE" || s.threat_level === "LOW_RISK";
+          return {
+            id: s.id,
+            icon: Globe,
+            primary: s.target,
+            secondary: `Score ${s.score}/100`,
+            verdict: isSafe ? "SAFE" : "RISKY",
+            verdictTone: isSafe ? "safe" : "danger",
+            time: formatRelativeTime(s.created_at),
+          };
+        }),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -224,10 +252,16 @@ export function DomainScannerWorkspace() {
       setScanState(payload.partial ? "partial" : "complete");
       logScanIfSignedIn({ target: payload.target, targetType: "domain", threatLevel: payload.threatLevel, score: payload.score });
 
-      setRecentDomains((prev) => [
-        { id: payload.id, domain: payload.target, verdict: verdictForRecent(payload), verdictTone: verdictToneFromScore(payload.score), time: "Just now" },
-        ...prev,
-      ].slice(0, 3));
+      const entry: RecentScanEntry = {
+        id: payload.id,
+        icon: Globe,
+        primary: payload.target,
+        secondary: `Score ${payload.score}/100`,
+        verdict: isSafeDomain(payload) ? "SAFE" : "RISKY",
+        verdictTone: isSafeDomain(payload) ? "safe" : "danger",
+        time: "Just now",
+      };
+      setRecentDomains((prev) => [entry, ...prev].slice(0, 3));
     } catch (e) {
       if (stageTimerRef.current) clearInterval(stageTimerRef.current);
       setScanState("error");
@@ -301,6 +335,22 @@ export function DomainScannerWorkspace() {
                 <ResultSummary data={buildResultSummary(result)} emptyLabel="Run a scan to see the domain's risk score and verdict." />
               )}
               {result && (scanState === "complete" || scanState === "partial") && <StatusCards cards={buildCards(result)} />}
+
+              {result &&
+                (scanState === "complete" || scanState === "partial") &&
+                result.threatLevel !== "SAFE" &&
+                result.threatLevel !== "LOW_RISK" && (
+                  <div className="mt-4">
+                    <BlockTargetButton
+                      key={result.id}
+                      target={`https://${result.target}`}
+                      blocklistHit={result.blocklistHit}
+                      blockedBy={result.blockedBy}
+                      suggestedCategory={result.threatLevel === "MALICIOUS" ? "malicious" : "suspicious"}
+                      targetLabel="Domain"
+                    />
+                  </div>
+                )}
             </div>
           </div>
 
@@ -321,7 +371,7 @@ export function DomainScannerWorkspace() {
       </div>
 
       <DnsSecurityRecords dns={result?.dns ?? null} tls={result?.tls ?? null} />
-      <RecentDomains domains={recentDomains} />
+      <RecentScans scans={recentDomains} title="Recent Domains" />
     </>
   );
 }

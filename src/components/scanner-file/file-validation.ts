@@ -1,4 +1,4 @@
-export const ACCEPTED_EXTENSIONS = [".exe", ".apk", ".pdf", ".docx", ".zip", ".js", ".msi"] as const;
+export const ACCEPTED_EXTENSIONS = [".exe", ".apk", ".pdf", ".docx", ".zip"] as const;
 export const MAX_FILE_SIZE = 32 * 1024 * 1024;
 
 const MAGIC_BYTES: Record<string, number[][]> = {

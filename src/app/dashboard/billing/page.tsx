@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { authedJson, publicJson } from "@/lib/firebase/api";
+import { startCheckout } from "@/lib/firebase/razorpay";
 import type { CreditsBalanceResult, BackendPlan, PaymentPlansResult } from "@/lib/firebase/nikscanner-types";
 
 export default function BillingPage() {
@@ -14,12 +15,21 @@ export default function BillingPage() {
   const [balance, setBalance] = useState<CreditsBalanceResult | null>(null);
   const [plans, setPlans] = useState<BackendPlan[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [checkoutPlanKey, setCheckoutPlanKey] = useState<string | null>(null);
+  const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
 
   useEffect(() => {
     publicJson<PaymentPlansResult>("/api/payment/plans")
       .then((res) => setPlans(res.plans))
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load plans."));
   }, []);
+
+  function refreshBalance() {
+    if (!user) return;
+    authedJson<CreditsBalanceResult>("/api/credits/balance")
+      .then((res) => setBalance(res))
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load billing info."));
+  }
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -38,6 +48,28 @@ export default function BillingPage() {
     };
   }, [authLoading, user]);
 
+  async function handleUpgrade(plan: BackendPlan) {
+    if (!user || checkoutPlanKey) return;
+    setError(null);
+    setCheckoutMessage(null);
+    setCheckoutPlanKey(plan.key);
+
+    try {
+      const outcome = await startCheckout(plan, user.email ?? undefined);
+      if (outcome.status === "credited") {
+        setCheckoutMessage(`Payment successful — ${outcome.result.plan_label} plan is now active.`);
+        refreshBalance();
+      } else if (outcome.status === "pending_reconciliation") {
+        setCheckoutMessage("We couldn't immediately confirm this payment — if it went through, your account will be credited shortly. Refresh this page in a minute to check.");
+      }
+      // "cancelled" — the user closed the checkout widget without paying; nothing to show.
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Checkout failed. Please try again.");
+    } finally {
+      setCheckoutPlanKey(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -46,6 +78,7 @@ export default function BillingPage() {
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
+      {checkoutMessage && <p className="text-sm text-flame-bright">{checkoutMessage}</p>}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -106,8 +139,19 @@ export default function BillingPage() {
                   </li>
                 </ul>
 
-                <Button className="mt-6 w-full" variant="outline" disabled>
-                  Checkout coming soon
+                <Button
+                  className="mt-6 w-full"
+                  variant="outline"
+                  disabled={!user || checkoutPlanKey !== null}
+                  onClick={() => handleUpgrade(plan)}
+                >
+                  {checkoutPlanKey === plan.key ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Processing...
+                    </span>
+                  ) : (
+                    "Upgrade"
+                  )}
                 </Button>
               </div>
             ))}

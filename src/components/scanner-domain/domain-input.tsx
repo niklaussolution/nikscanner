@@ -30,7 +30,9 @@ export function DomainInput({
   const arrowRef = useRef<SVGSVGElement>(null);
   const quickX = useRef<gsap.QuickToFunc | null>(null);
 
-  const busy = state === "scanning";
+  // "validating" fires synchronously on click, before any async work — treating it as busy
+  // too means the button locks the instant it's clicked, matching the URL/File scanners.
+  const busy = state === "scanning" || state === "validating";
 
   function handleEnter() {
     if (prefersReducedMotion() || busy) return;

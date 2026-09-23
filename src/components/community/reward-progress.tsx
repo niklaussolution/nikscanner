@@ -51,14 +51,14 @@ export function RewardProgress() {
         <div>
           <p className="text-sm font-bold text-[var(--text)]">Earn points for every verified report</p>
           <p className="mt-0.5 text-xs text-[var(--text-muted)]">Help identify threats and climb the leaderboard.</p>
-          <div className="mt-3 flex items-center gap-3">
+          {/* <div className="mt-3 flex items-center gap-3">
             <span className="text-sm font-bold text-[var(--orange-light)]">
               {REWARD_PROGRESS.currentXp.toLocaleString()} / {REWARD_PROGRESS.targetXp.toLocaleString()} XP
             </span>
-          </div>
-          <div className="mt-2 h-1.5 w-40 overflow-hidden rounded-full bg-black/30 sm:w-48">
+          </div> */}
+          {/* <div className="mt-2 h-1.5 w-40 overflow-hidden rounded-full bg-black/30 sm:w-48">
             <div ref={barRef} className="h-full w-full origin-left rounded-full bg-[var(--orange)]" style={{ transform: "scaleX(0)" }} />
-          </div>
+          </div> */}
         </div>
       </div>
 

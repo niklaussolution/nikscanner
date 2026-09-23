@@ -39,6 +39,7 @@ function PodiumCard({ entry, place }: { entry: LeaderboardEntry; place: 1 | 2 | 
       <MonogramAvatar username={entry.name} size={isFirst ? 72 : 60} />
 
       <p className={cn("mt-3 font-bold text-[var(--white)]", isFirst ? "text-lg" : "text-base")}>{entry.name}</p>
+      {entry.country && <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">{entry.country}</p>}
 
       <p className={cn("mt-3 font-extrabold text-[var(--white)]", isFirst ? "text-2xl" : "text-xl")}>
         {entry.count.toLocaleString()}

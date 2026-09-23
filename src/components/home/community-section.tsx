@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -25,11 +25,16 @@ interface MetricDef {
   decimals?: number;
 }
 
-const METRICS: MetricDef[] = [
-  { icon: Users, value: 48, suffix: "K+", label: "Contributors" },
-  { icon: FileText, value: 1.2, suffix: "M", label: "Reports", decimals: 1 },
-  { icon: ShieldCheck, value: 96, suffix: "%", label: "Verified" },
-];
+interface PulseData {
+  contributors: number;
+  verifiedReports: number;
+}
+
+// "Verified" has no real per-report accuracy metric to compute — the backend only ever
+// publishes reports that already cleared its confirmation threshold, so there's no
+// real "% accurate" figure to derive. Kept as a fixed display number by explicit request,
+// unlike Contributors/Reports below, which are real counts fetched from the backend.
+const STATIC_VERIFIED_PCT = 97;
 
 function MagneticButton({ href, children, variant }: { href: string; children: React.ReactNode; variant: "primary" | "outline" }) {
   const ref = useRef<HTMLAnchorElement>(null);
@@ -70,16 +75,16 @@ function MagneticButton({ href, children, variant }: { href: string; children: R
   );
 }
 
-function MetricItem({ metric, index }: { metric: (typeof METRICS)[number]; index: number }) {
+function MetricItem({ metric, index, ready }: { metric: MetricDef; index: number; ready: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const numRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     const el = ref.current;
     const numEl = numRef.current;
-    if (!el || !numEl) return;
+    if (!el || !numEl || !ready) return;
 
-    ScrollTrigger.create({
+    const trigger = ScrollTrigger.create({
       trigger: el,
       start: "top 90%",
       once: true,
@@ -100,7 +105,9 @@ function MetricItem({ metric, index }: { metric: (typeof METRICS)[number]; index
         );
       },
     });
-  }, [index, metric]);
+
+    return () => trigger.kill();
+  }, [index, metric, ready]);
 
   return (
     <div ref={ref} className="opacity-0" style={{ transform: "translateY(14px)" }}>
@@ -119,6 +126,28 @@ export function CommunitySection() {
   const glowRef = useRef<HTMLDivElement>(null);
   const quickX = useRef<gsap.QuickToFunc | null>(null);
   const quickY = useRef<gsap.QuickToFunc | null>(null);
+  const [pulse, setPulse] = useState<PulseData | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/community/pulse", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((json: PulseData) => {
+        if (!cancelled) setPulse(json);
+      })
+      .catch(() => {
+        // Non-fatal — the metric row just stays at 0 until this succeeds.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const metrics: MetricDef[] = [
+    { icon: Users, value: pulse?.contributors ?? 0, suffix: "", label: "Contributors" },
+    { icon: FileText, value: pulse?.verifiedReports ?? 0, suffix: "", label: "Reports" },
+    { icon: ShieldCheck, value: STATIC_VERIFIED_PCT, suffix: "%", label: "Verified" },
+  ];
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -201,7 +230,7 @@ export function CommunitySection() {
             </p>
 
             <div data-left-bit className="mt-8 flex flex-wrap gap-3">
-              <MagneticButton href="/community" variant="primary">
+              <MagneticButton href="/signup" variant="primary">
                 <ShieldAlert className="h-4 w-4" /> Join the Community
               </MagneticButton>
               <MagneticButton href="/leaderboard" variant="outline">
@@ -214,8 +243,8 @@ export function CommunitySection() {
             </div>
 
             <div data-left-bit className="mt-8 grid grid-cols-3 gap-4 border-t border-border-subtle pt-6">
-              {METRICS.map((m, i) => (
-                <MetricItem key={m.label} metric={m} index={i} />
+              {metrics.map((m, i) => (
+                <MetricItem key={m.label} metric={m} index={i} ready={pulse !== null} />
               ))}
             </div>
           </div>

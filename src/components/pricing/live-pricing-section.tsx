@@ -4,9 +4,14 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { PricingCard, type PricingTier } from "@/components/pricing/pricing-card";
 import { publicJson } from "@/lib/firebase/api";
+import { useAuth } from "@/lib/firebase/auth-context";
+import { startCheckout } from "@/lib/firebase/razorpay";
 import type { BackendPlan, PaymentPlansResult } from "@/lib/firebase/nikscanner-types";
 
-function tierFromPlan(plan: BackendPlan): PricingTier {
+function tierFromPlan(
+  plan: BackendPlan,
+  opts: { signedIn: boolean; loading: boolean; onUpgrade: (plan: BackendPlan) => void },
+): PricingTier {
   return {
     name: plan.label,
     price: `₹${plan.amount_rupees}`,
@@ -18,15 +23,20 @@ function tierFromPlan(plan: BackendPlan): PricingTier {
       plan.unlimited_url ? "Unlimited URL scans" : `+${plan.credits} scan credits`,
       `+${plan.files} file scans`,
     ],
-    cta: "Get Started",
-    href: "/signup",
+    // Signed-in visitors check out directly from this page; signed-out visitors go create an
+    // account first — the checkout flow itself always requires a signed-in Firebase user (the
+    // backend's create-order/verify endpoints are auth-gated), so there's nothing to run yet.
+    ...(opts.signedIn ? { cta: "Upgrade Now", onClick: () => opts.onUpgrade(plan), loading: opts.loading } : { cta: "Get Started", href: "/signup" }),
     highlighted: plan.key === "pro",
   };
 }
 
 export function LivePricingSection() {
+  const { user } = useAuth();
   const [plans, setPlans] = useState<BackendPlan[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [checkoutPlanKey, setCheckoutPlanKey] = useState<string | null>(null);
+  const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
 
   useEffect(() => {
     publicJson<PaymentPlansResult>("/api/payment/plans")
@@ -34,7 +44,28 @@ export function LivePricingSection() {
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load plans."));
   }, []);
 
-  const tiers: PricingTier[] = (plans ?? []).map(tierFromPlan);
+  async function handleUpgrade(plan: BackendPlan) {
+    if (!user || checkoutPlanKey) return;
+    setError(null);
+    setCheckoutMessage(null);
+    setCheckoutPlanKey(plan.key);
+    try {
+      const outcome = await startCheckout(plan, user.email ?? undefined);
+      if (outcome.status === "credited") {
+        setCheckoutMessage(`Payment successful — ${outcome.result.plan_label} plan is now active.`);
+      } else if (outcome.status === "pending_reconciliation") {
+        setCheckoutMessage("We couldn't immediately confirm this payment — if it went through, your account will be credited shortly.");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Checkout failed. Please try again.");
+    } finally {
+      setCheckoutPlanKey(null);
+    }
+  }
+
+  const tiers: PricingTier[] = (plans ?? []).map((plan) =>
+    tierFromPlan(plan, { signedIn: !!user, loading: checkoutPlanKey === plan.key, onUpgrade: handleUpgrade }),
+  );
 
   return (
     <section className="bg-grid border-t border-border-subtle px-5 py-24 sm:px-6 lg:px-8" style={{ background: "#070707" }}>
@@ -48,6 +79,7 @@ export function LivePricingSection() {
         </div>
 
         {error && <p className="mt-8 text-center text-sm text-danger">{error}</p>}
+        {checkoutMessage && <p className="mt-8 text-center text-sm text-flame-bright">{checkoutMessage}</p>}
 
         {!plans ? (
           <div className="mt-14 flex items-center justify-center gap-2 text-sm text-muted">

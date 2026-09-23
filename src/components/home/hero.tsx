@@ -6,13 +6,10 @@ import { ArrowRight, Download, Map, Database, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroScanner } from "@/components/scanner/hero-scanner";
 import { ScanVisualization } from "@/components/home/scan-visualization";
+import { useBackendStatus } from "@/lib/firebase/use-backend-status";
+import { cn } from "@/lib/utils";
 
 const STATUS_ITEMS = [
-  {
-    dot: true,
-    title: "ENGINE ONLINE",
-    subtitle: "Real-time protection",
-  },
   {
     icon: Database,
     title: "42 SOURCES CONNECTED",
@@ -26,6 +23,7 @@ const STATUS_ITEMS = [
 ];
 
 export function Hero() {
+  const backendOnline = useBackendStatus();
   return (
     <section className="relative overflow-hidden bg-grid bg-radial-flame pt-20 pb-10 sm:pt-28 sm:pb-32">
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-bg-black" />
@@ -33,7 +31,7 @@ export function Hero() {
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
           <div>
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -41,7 +39,7 @@ export function Hero() {
             >
               <span className="h-1.5 w-1.5 rounded-full bg-flame-bright animate-pulse-glow" />
               SCAN. DETECT. BLOCK. PROTECT.
-            </motion.div>
+            </motion.div> */}
 
             <motion.h1
               initial={{ opacity: 0, y: 16 }}
@@ -102,13 +100,27 @@ export function Hero() {
               transition={{ duration: 0.6, delay: 0.25 }}
               className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4"
             >
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={cn(
+                    "h-2.5 w-2.5 rounded-full",
+                    backendOnline === "online" && "bg-success shadow-[0_0_8px_rgba(34,197,94,0.7)]",
+                    backendOnline === "offline" && "bg-danger shadow-[0_0_8px_rgba(239,68,68,0.7)]",
+                    backendOnline === "checking" && "animate-pulse bg-muted",
+                  )}
+                />
+                <div>
+                  <p className="text-xs font-semibold tracking-wide text-white">
+                    {backendOnline === "online" ? "ENGINE ONLINE" : backendOnline === "offline" ? "ENGINE OFFLINE" : "CHECKING ENGINE..."}
+                  </p>
+                  <p className="text-[11px] text-muted">
+                    {backendOnline === "offline" ? "Scanning backend unreachable" : "Real-time protection"}
+                  </p>
+                </div>
+              </div>
               {STATUS_ITEMS.map((item) => (
                 <div key={item.title} className="flex items-center gap-2.5">
-                  {item.dot ? (
-                    <span className="h-2.5 w-2.5 rounded-full bg-success shadow-[0_0_8px_rgba(34,197,94,0.7)]" />
-                  ) : (
-                    item.icon && <item.icon className="h-4 w-4 text-muted" />
-                  )}
+                  <item.icon className="h-4 w-4 text-muted" />
                   <div>
                     <p className="text-xs font-semibold tracking-wide text-white">{item.title}</p>
                     <p className="text-[11px] text-muted">{item.subtitle}</p>

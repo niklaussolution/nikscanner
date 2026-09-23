@@ -9,7 +9,6 @@ import { HowItWorks } from "@/components/home/how-it-works";
 import { StatsSection } from "@/components/home/stats-section";
 import { ThreatMapSection } from "@/components/home/threat-map-section";
 import { CommunitySection } from "@/components/home/community-section";
-import { DeveloperSection } from "@/components/home/developer-section";
 import { AndroidSection } from "@/components/home/android-section";
 import { PricingPreview } from "@/components/home/pricing-preview";
 import { FaqSection } from "@/components/home/faq-section";
@@ -29,7 +28,6 @@ export default function Home() {
         <ThreatMapSection />
         <CommunitySection />
         <AndroidSection />
-        <DeveloperSection />
         <PricingPreview />
         <FaqSection />
         {!user && <FinalCta />}

@@ -9,10 +9,18 @@ import { UrlInputPanel } from "@/components/scanner-url/url-input-panel";
 import { ScanProgressRail } from "@/components/scanner-url/scan-progress-rail";
 import { AnalysisCards } from "@/components/scanner-url/analysis-cards";
 import { ScanEngineRadar } from "@/components/scanner-url/scan-engine-radar";
-import { RecentScans, INITIAL_RECENT_SCANS, type RecentScanEntry } from "@/components/scanner-url/recent-scans";
+import { RecentScans, type RecentScanEntry } from "@/components/scanner-url/recent-scans";
 import { STAGES, type AnalysisCardData, type ScanState } from "@/components/scanner-url/types";
+import { useRouter } from "next/navigation";
 import { THREAT_LEVEL_LABEL, type ScanResultPayload } from "@/types/scan";
 import { logScanIfSignedIn } from "@/lib/firebase/log-scan";
+import { autoReportIfSignedIn } from "@/lib/firebase/auto-report";
+import { consumeCredit } from "@/lib/firebase/credits";
+import { Toast } from "@/components/ui/toast";
+import { useAuth } from "@/lib/firebase/auth-context";
+import { fetchRecentScans } from "@/lib/firebase/scan-history";
+import { BlockTargetButton } from "@/components/scanner-url/block-target-button";
+import { formatRelativeTime } from "@/lib/format-time";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -26,7 +34,7 @@ function defaultCards(): AnalysisCardData[] {
     { id: "reputation", icon: Database, title: "URL Reputation", value: "42 sources", tone: "neutral" },
     { id: "ssl", icon: Lock, title: "SSL Certificate", value: "Valid & trusted", tone: "neutral" },
     { id: "redirects", icon: Share2, title: "Redirect Chain", value: "0 redirects", tone: "neutral" },
-    { id: "phishing", icon: ShieldCheck, title: "Phishing Signals", value: "No scan yet", tone: "neutral" },
+    { id: "phishing", icon: ShieldCheck, title: "Phishing Signals", value: "No scan yet", tone: "neutral", featured: true },
   ];
 }
 
@@ -56,15 +64,37 @@ function computeResultCards(result: ScanResultPayload, targetUrl: string): Analy
       value: isHttps ? "Valid & trusted" : "Not encrypted (HTTP)",
       tone: isHttps ? "safe" : "danger",
     },
-    { id: "redirects", icon: Share2, title: "Redirect Chain", value: "Not tracked in this scan", tone: "neutral" },
+    {
+      id: "redirects",
+      icon: Share2,
+      title: "Redirect Chain",
+      value: redirectChainSummary(result),
+      tone: redirectChainTone(result),
+    },
     {
       id: "phishing",
       icon: ShieldCheck,
       title: "Phishing Signals",
       value: THREAT_LEVEL_LABEL[result.threatLevel],
       tone: toneForThreatLevel(result.threatLevel),
+      featured: true,
     },
   ];
+}
+
+function redirectChainSummary(result: ScanResultPayload): string {
+  const chain = result.redirectChain;
+  if (!chain) return "Not tracked in this scan";
+  const hopCount = Math.max(chain.length - 1, 0);
+  if (hopCount === 0) return result.unmasked ? "Shortener, no further redirects" : "No redirects";
+  return `${hopCount} redirect${hopCount > 1 ? "s" : ""}${result.unmasked ? " (unmasked)" : ""}`;
+}
+
+function redirectChainTone(result: ScanResultPayload): AnalysisCardData["tone"] {
+  const chain = result.redirectChain;
+  if (!chain) return "neutral";
+  const hopCount = Math.max(chain.length - 1, 0);
+  return hopCount > 3 ? "danger" : "neutral";
 }
 
 function safeHostname(url: string) {
@@ -76,6 +106,8 @@ function safeHostname(url: string) {
 }
 
 export function ScannerWorkspace() {
+  const router = useRouter();
+  const { user } = useAuth();
   const rootRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
   const quickX = useRef<gsap.QuickToFunc | null>(null);
@@ -88,7 +120,31 @@ export function ScannerWorkspace() {
   const [cards, setCards] = useState<AnalysisCardData[]>(defaultCards());
   const [validationError, setValidationError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [recentScans, setRecentScans] = useState<RecentScanEntry[]>(INITIAL_RECENT_SCANS);
+  const [recentScans, setRecentScans] = useState<RecentScanEntry[]>([]);
+  const [showCreditsToast, setShowCreditsToast] = useState(false);
+  const [lastResult, setLastResult] = useState<ScanResultPayload | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    fetchRecentScans("url").then((scans) => {
+      if (cancelled) return;
+      setRecentScans(
+        scans.map((s) => ({
+          id: s.id,
+          icon: Globe,
+          primary: safeHostname(s.target),
+          secondary: s.target,
+          verdict: s.threat_level === "SAFE" || s.threat_level === "LOW_RISK" ? "SAFE" : "PHISHING",
+          verdictTone: s.threat_level === "SAFE" || s.threat_level === "LOW_RISK" ? "safe" : "danger",
+          time: formatRelativeTime(s.created_at),
+        })),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -146,6 +202,7 @@ export function ScannerWorkspace() {
       setValidationError(null);
       setErrorMessage(null);
       setActiveStageIndex(0);
+      setLastResult(null);
     }
   }
 
@@ -162,8 +219,26 @@ export function ScannerWorkspace() {
 
     setValidationError(null);
     setErrorMessage(null);
+    // Loading state takes effect the instant the button is clicked, not once the (async)
+    // credit check resolves — the button should never look inert while a network call is in
+    // flight underneath it.
     setScanState("scanning");
     setActiveStageIndex(0);
+
+    // 2 credits per URL scan (server-decided, never trusted from a cached client balance) —
+    // deducted before the scan runs so a scan can't start without the allowance to pay for it.
+    try {
+      const consume = await consumeCredit("url_scan");
+      if (!consume.allowed) {
+        setScanState("idle");
+        setShowCreditsToast(true);
+        return;
+      }
+    } catch (e) {
+      setScanState("error");
+      setErrorMessage(e instanceof Error ? e.message : "Could not check your scan credits.");
+      return;
+    }
 
     let i = 0;
     stageTimerRef.current = setInterval(() => {
@@ -193,8 +268,12 @@ export function ScannerWorkspace() {
       if (stageTimerRef.current) clearInterval(stageTimerRef.current);
       setActiveStageIndex(STAGES.length - 1);
       setCards(computeResultCards(result, trimmed));
+      setLastResult(result);
       setScanState("complete");
       logScanIfSignedIn({ target: trimmed, targetType: "url", threatLevel: result.threatLevel, score: result.score });
+      if (result.shouldAutoReport && result.autoReportCategory) {
+        autoReportIfSignedIn(result.finalUrl ?? trimmed, result.autoReportCategory);
+      }
       const isSafe = result.threatLevel === "SAFE" || result.threatLevel === "LOW_RISK";
       const verdictTone: RecentScanEntry["verdictTone"] = isSafe ? "safe" : "danger";
       setRecentScans((prev) => [
@@ -256,7 +335,21 @@ export function ScannerWorkspace() {
                 <ScanProgressRail state={scanState} activeIndex={activeStageIndex} />
               )}
 
-              <AnalysisCards cards={cards} />
+              <AnalysisCards
+                cards={cards}
+                trailing={
+                  scanState === "complete" && lastResult && lastResult.threatLevel !== "SAFE" && lastResult.threatLevel !== "LOW_RISK" ? (
+                    <BlockTargetButton
+                      key={lastResult.id}
+                      target={lastResult.finalUrl ?? value.trim()}
+                      blocklistHit={lastResult.blocklistHit}
+                      blockedBy={lastResult.blockedBy}
+                      suggestedCategory={lastResult.threatLevel === "MALICIOUS" ? "malicious" : "suspicious"}
+                      targetLabel="URL"
+                    />
+                  ) : undefined
+                }
+              />
             </div>
           </div>
 
@@ -267,6 +360,14 @@ export function ScannerWorkspace() {
       </div>
 
       <RecentScans scans={recentScans} />
+
+      {showCreditsToast && (
+        <Toast
+          message="Credits over"
+          action={{ label: "Upgrade", onClick: () => router.push("/dashboard/billing") }}
+          onDismiss={() => setShowCreditsToast(false)}
+        />
+      )}
     </>
   );
 }

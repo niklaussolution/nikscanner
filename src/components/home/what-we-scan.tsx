@@ -313,12 +313,12 @@ export function WhatWeScan() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="relative overflow-hidden bg-bg-black pt-24 pb-56 sm:pb-64">
+    <section ref={sectionRef} className="relative overflow-hidden bg-bg-black pt-20 pb-32 sm:pb-20">
       {/* <GlobeHorizon /> */}
       <div className="pointer-events-none absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-flame-primary/15 to-transparent" />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <CornerNote lines={["One", "Platform", "Greater", "Security"]} align="left" className="absolute left-4 top-0 hidden lg:flex" />
+        {/* <CornerNote lines={["One", "Platform", "Greater", "Security"]} align="left" className="absolute left-4 top-0 hidden lg:flex" />
         <CornerNote lines={["Detect", "Analyze", "Stay Ahead"]} align="right" className="absolute right-4 top-0 hidden lg:flex" />
         <CornerNote
           lines={["More Surfaces.", "Less Blind Spots."]}
@@ -331,10 +331,10 @@ export function WhatWeScan() {
           align="right"
           className="absolute right-4 hidden lg:flex"
           style={{ bottom: "-160px" }}
-        />
+        /> */}
 
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-flame-bright">Coverage</p>
+          {/* <p className="text-xs font-semibold uppercase tracking-widest text-flame-bright">Coverage</p> */}
           <h2 className="mt-3 font-heading text-3xl font-bold text-white sm:text-4xl">What NIKSCANNER Scans</h2>
           <p className="mt-3 text-muted">One platform, every attack surface — from a single link to a full device.</p>
         </div>
@@ -357,14 +357,14 @@ export function WhatWeScan() {
               <div className="absolute h-[78%] w-[78%] rounded-full border border-flame-primary/20" />
               <div className="absolute h-[56%] w-[56%] rounded-full border border-flame-primary/25" />
 
-              <div className="relative flex flex-col items-center pt-14">
+              <div className="relative flex flex-col items-center pt-8">
                 <div className="flex h-24 w-24 items-center justify-center rounded-full border border-flame-primary/40 bg-flame-primary/10">
                   <Shield className="h-11 w-11 text-flame-bright" strokeWidth={1.5} />
                 </div>
                 <p className="mt-4 whitespace-nowrap text-xs font-bold uppercase tracking-widest text-white">Unified Scan Engine</p>
-                <p className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-success">
+                {/* <p className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-success">
                   <CheckCircle2 className="h-3.5 w-3.5" /> Online
-                </p>
+                </p> */}
               </div>
             </div>
 

@@ -6,10 +6,12 @@ import { updateProfile } from "firebase/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { authedJson } from "@/lib/firebase/api";
-import type { PointsResult, RankResult, UserBlocklistResult } from "@/lib/firebase/nikscanner-types";
+import { COUNTRIES } from "@/lib/data/countries";
+import type { PointsResult, RankResult, UserBlocklistResult, ProfileResult, ProfileUpdateResult } from "@/lib/firebase/nikscanner-types";
 
 interface ProfileStats {
   points: number;
@@ -23,6 +25,7 @@ export default function ProfilePage() {
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [country, setCountry] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -39,10 +42,12 @@ export default function ProfilePage() {
       authedJson<RankResult>("/api/leaderboard/me"),
       authedJson<UserBlocklistResult>("/api/user/blocklist"),
       authedJson<{ scans: { id: string }[] }>("/api/scan/history?severity=threats&limit=200"),
+      authedJson<ProfileResult>("/api/user/profile"),
     ])
-      .then(([points, rank, blocklist, threats]) => {
+      .then(([points, rank, blocklist, threats, profile]) => {
         if (cancelled) return;
         setStats({ points: points.points, rank: rank.rank, threats: threats.scans.length, blocked: blocklist.count });
+        setCountry(profile.country ?? "");
       })
       .catch((e) => {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load profile stats.");
@@ -59,6 +64,11 @@ export default function ProfilePage() {
     setSaved(false);
     try {
       await updateProfile(user, { displayName: name.trim() });
+      await authedJson<ProfileUpdateResult>("/api/user/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ country }),
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
@@ -109,11 +119,11 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
-            <div className="mt-5 flex gap-2">
+            {/* <div className="mt-5 flex gap-2">
               <Trophy className="h-8 w-8 rounded-lg border border-flame-primary/25 bg-flame-primary/10 p-1.5 text-flame-bright" />
               <ShieldAlert className="h-8 w-8 rounded-lg border border-flame-primary/25 bg-flame-primary/10 p-1.5 text-flame-bright" />
               <Ban className="h-8 w-8 rounded-lg border border-flame-primary/25 bg-flame-primary/10 p-1.5 text-flame-bright" />
-            </div>
+            </div> */}
           </CardContent>
         </Card>
 
@@ -130,6 +140,17 @@ export default function ProfilePage() {
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-muted">Email</label>
                 <Input value={user?.email ?? ""} type="email" disabled />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted">Country</label>
+                <Select value={country} onChange={(e) => setCountry(e.target.value)}>
+                  <option value="">Not set</option>
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
+                </Select>
               </div>
             </div>
             <div className="flex items-center gap-3">

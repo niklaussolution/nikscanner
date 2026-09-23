@@ -492,7 +492,7 @@ function StepCard({ s, index }: { s: StepDef; index: number }) {
       <span
         data-step-number
         aria-hidden
-        className="pointer-events-none absolute left-1 top-0 z-0 select-none overflow-hidden font-heading text-7xl font-bold text-white/[0.14]"
+        className="pointer-events-none absolute left-1 top-0 z-0 select-none overflow-hidden font-heading text-7xl font-bold text-white/[0.20]"
         style={{ clipPath: "inset(0 100% 0 0)", textShadow: "0 0 24px rgba(255,90,0,0.25)" }}
       >
         {s.step}
@@ -674,9 +674,9 @@ export function HowItWorks() {
     <section ref={sectionRef} className="relative overflow-hidden border-t border-border-subtle bg-secondary-dark bg-grid py-24">
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p data-heading-word className="text-xs font-semibold uppercase tracking-widest text-flame-bright">
+          {/* <p data-heading-word className="text-xs font-semibold uppercase tracking-widest text-flame-bright">
             Process
-          </p>
+          </p> */}
           <h2 className="mt-3 font-heading text-3xl font-bold text-white sm:text-4xl">
             <span data-heading-word className="inline-block">
               How
@@ -754,12 +754,12 @@ export function HowItWorks() {
                   {stage.label}
                 </span>
               </div>
-              {i < STAGES.length - 1 && <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted/50" />}
+              {i < STAGES.length - 1 && <ArrowRight className="h-3.5 w-3.5 shrink-0 text-flame-bright" />}
             </div>
           ))}
         </div>
 
-        <div className="mt-10 flex items-center justify-between text-[10px] font-semibold uppercase leading-relaxed tracking-widest text-muted/50">
+        {/* <div className="mt-10 flex items-center justify-between text-[10px] font-semibold uppercase leading-relaxed tracking-widest text-muted/50">
           <p>
             Faster
             <br />
@@ -772,7 +772,7 @@ export function HowItWorks() {
             <br />
             For A Safer Tomorrow
           </p>
-        </div>
+        </div> */}
       </div>
     </section>
   );

@@ -19,17 +19,14 @@ import { looksConfusable, openSafely } from "@/components/scanner-qr/open-safely
 import { QR_STAGES, type QrScanState } from "@/components/scanner-qr/types";
 import { THREAT_LEVEL_LABEL, type ScanResultPayload } from "@/types/scan";
 import { logScanIfSignedIn } from "@/lib/firebase/log-scan";
+import { useAuth } from "@/lib/firebase/auth-context";
+import { fetchRecentScans } from "@/lib/firebase/scan-history";
+import { formatRelativeTime } from "@/lib/format-time";
 import type { TlsInfo } from "@/lib/domain-intel/tls";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
-
-const INITIAL_RECENT: RecentScanEntry[] = [
-  { id: "1", icon: Route, primary: "restaurant-menu.png", secondary: "menu.example.com", verdict: "SAFE", verdictTone: "safe", time: "4m ago" },
-  { id: "2", icon: QrCode, primary: "payment_qr.png", secondary: "google.com", verdict: "LOW RISK", verdictTone: "safe", time: "18m ago" },
-  { id: "3", icon: QrCode, primary: "promo-code.jpg", secondary: "secure-gift-check.xyz", verdict: "HIGH RISK", verdictTone: "danger", time: "41m ago" },
-];
 
 function verdictToneFromThreatLevel(threatLevel: ScanResultPayload["threatLevel"]): "safe" | "warning" | "danger" {
   if (threatLevel === "SAFE" || threatLevel === "LOW_RISK") return "safe";
@@ -44,6 +41,7 @@ function payloadIcon(type: QrPayloadType) {
 }
 
 export function QrScannerWorkspace() {
+  const { user } = useAuth();
   const rootRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
   const quickX = useRef<gsap.QuickToFunc | null>(null);
@@ -59,8 +57,33 @@ export function QrScannerWorkspace() {
   const [tlsInfo, setTlsInfo] = useState<TlsInfo | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [recentScans, setRecentScans] = useState<RecentScanEntry[]>(INITIAL_RECENT);
+  const [recentScans, setRecentScans] = useState<RecentScanEntry[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    fetchRecentScans("qr").then((scans) => {
+      if (cancelled) return;
+      setRecentScans(
+        scans.map((s) => {
+          const isSafe = s.threat_level === "SAFE" || s.threat_level === "LOW_RISK";
+          return {
+            id: s.id,
+            icon: Globe,
+            primary: safeHostname(s.target) ?? s.target,
+            secondary: s.target,
+            verdict: isSafe ? "SAFE" : "HIGH RISK",
+            verdictTone: isSafe ? "safe" : "danger",
+            time: formatRelativeTime(s.created_at),
+          };
+        }),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   useEffect(() => {
     const root = rootRef.current;

@@ -13,11 +13,13 @@ import { Loader2 } from "lucide-react";
 import { AuthCard } from "@/components/auth/auth-card";
 import { SocialLogin } from "@/components/auth/social-login";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { firebaseAuthErrorMessage } from "@/lib/firebase/errors";
 import { initUserAfterAuth } from "@/lib/firebase/init-user";
 import { safeNextPath } from "@/lib/utils";
+import { COUNTRIES } from "@/lib/data/countries";
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -36,6 +38,7 @@ export default function SignupPage() {
     const email = String(form.get("email") ?? "");
     const password = String(form.get("password") ?? "");
     const confirm = form.get("confirmPassword");
+    const country = String(form.get("country") ?? "");
 
     if (password !== confirm) {
       setError("Passwords do not match.");
@@ -48,7 +51,7 @@ export default function SignupPage() {
     try {
       const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
       if (name) await updateProfile(credential.user, { displayName: name });
-      await initUserAfterAuth(credential.user);
+      await initUserAfterAuth(credential.user, country);
       router.push(destination);
     } catch (err) {
       setError(firebaseAuthErrorMessage(err));
@@ -101,6 +104,21 @@ export default function SignupPage() {
             Email
           </label>
           <Input id="email" name="email" type="email" required placeholder="you@company.com" />
+        </div>
+        <div>
+          <label htmlFor="country" className="mb-1.5 block text-xs font-medium text-muted">
+            Country
+          </label>
+          <Select id="country" name="country" required defaultValue="">
+            <option value="" disabled>
+              Select your country
+            </option>
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
         </div>
         <div>
           <label htmlFor="password" className="mb-1.5 block text-xs font-medium text-muted">

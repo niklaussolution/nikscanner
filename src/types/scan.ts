@@ -2,6 +2,9 @@ export type ScanTargetType = "url" | "file" | "domain" | "ip" | "qr";
 
 export type ThreatLevel = "SAFE" | "LOW_RISK" | "SUSPICIOUS" | "HIGH_RISK" | "MALICIOUS";
 
+/** Threat levels severe enough to count as "a threat found" in dashboard stats/charts. */
+export const THREAT_SEVERITY_LEVELS = new Set<ThreatLevel>(["SUSPICIOUS", "HIGH_RISK", "MALICIOUS"]);
+
 export type EngineVerdict = "clean" | "detected" | "suspicious" | "unknown";
 
 export interface EngineResult {
@@ -21,6 +24,11 @@ export interface ScanEvidence {
   tone?: "neutral" | "good" | "bad" | "warn";
 }
 
+export interface RedirectHopSummary {
+  url: string;
+  status: number | null;
+}
+
 export interface ScanResultPayload {
   id: string;
   targetType: ScanTargetType;
@@ -32,6 +40,18 @@ export interface ScanResultPayload {
   evidence: ScanEvidence[];
   createdAt: string;
   demo: boolean;
+  /** Present only for targetType "url": populated by the link-analysis pipeline
+   *  (unmasking, redirect-following, community blocklist, phishing heuristics). */
+  redirectChain?: RedirectHopSummary[];
+  finalUrl?: string;
+  unmasked?: boolean;
+  shouldAutoReport?: boolean;
+  autoReportCategory?: string;
+  /** Community blocklist status — present for "url", "domain" and "ip" targets. `blockedBy` is the
+   *  display name of whoever first reported it; absent/undefined when not blocklisted, so the
+   *  UI can offer a "Block this" action instead. */
+  blocklistHit?: boolean;
+  blockedBy?: string;
 }
 
 export function scoreToThreatLevel(score: number): ThreatLevel {

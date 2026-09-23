@@ -121,9 +121,9 @@ export function PricingPreview() {
     >
       <div className="mx-auto max-w-[1440px] px-5 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p data-eyebrow className="text-sm font-semibold uppercase tracking-[0.15em] text-flame-primary">
+          {/* <p data-eyebrow className="text-sm font-semibold uppercase tracking-[0.15em] text-flame-primary">
             Simple Pricing
-          </p>
+          </p> */}
           <h2
             data-heading
             className="mt-3 font-heading font-extrabold text-white"
@@ -139,7 +139,7 @@ export function PricingPreview() {
         {error && <p className="mt-8 text-center text-sm text-danger">{error}</p>}
 
         {/* pricing cards */}
-        <div className="relative mt-14 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="relative mt-14 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 ">
           <div
             aria-hidden
             className="pointer-events-none absolute left-1/2 top-0 hidden h-full w-[38%] -translate-x-1/2 rounded-full bg-flame-primary/10 blur-[100px] lg:block"

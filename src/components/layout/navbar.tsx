@@ -28,19 +28,10 @@ const NAV_LINKS = [
   { label: "Threat Intelligence", href: "/threat-intelligence" },
   { label: "Community", href: "/community" },
   { label: "Leaderboard", href: "/leaderboard" },
-  {
-    label: "Developers",
-    href: "/developers",
-    menu: [
-      { label: "API", href: "/api" },
-      { label: "Documentation", href: "/docs" },
-      { label: "Status", href: "/status" },
-    ],
-  },
   { label: "Pricing", href: "/pricing" },
 ];
 
-const AUTH_ONLY_LABELS = new Set(["Leaderboard", "Developers"]);
+const AUTH_ONLY_LABELS = new Set(["Leaderboard"]);
 
 function isLinkActive(pathname: string, link: (typeof NAV_LINKS)[number]): boolean {
   if (link.href === "/") return pathname === "/";

@@ -19,10 +19,10 @@ export function ScannerStatusRow({ items = DEFAULT_ITEMS }: { items?: StatusRowI
       data-status-row
       className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]"
     >
-      <span className="flex items-center gap-2">
+      {/* <span className="flex items-center gap-2">
         <span data-status-dot className="h-2 w-2 rounded-full bg-[var(--safe)]" />
         <span className="text-[var(--safe)]">Engine Online</span>
-      </span>
+      </span> */}
       {items.map((item) => (
         <span key={item.label} className="contents">
           <span aria-hidden className="hidden h-3 w-px bg-[var(--border)] sm:block" />

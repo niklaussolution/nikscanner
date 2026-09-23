@@ -26,10 +26,21 @@ export interface RankResult {
 export interface LeaderboardEntry {
   name: string;
   count: number;
+  country: string | null;
 }
 
 export interface LeaderboardResult {
   leaders: LeaderboardEntry[];
+}
+
+export interface ProfileResult {
+  country: string | null;
+  deactivated: boolean;
+}
+
+export interface ProfileUpdateResult {
+  ok: true;
+  country: string | null;
 }
 
 export interface CreditsBalanceResult {
@@ -83,4 +94,45 @@ export interface BackendPlan {
 
 export interface PaymentPlansResult {
   plans: BackendPlan[];
+}
+
+export interface ConsumeCreditResult {
+  ok: true;
+  allowed: boolean;
+  credits: number;
+  file_scans_allowed: number;
+  file_scans_used: number;
+  pro_unlimited_url: boolean;
+  plan_key: string;
+  plan_label: string;
+}
+
+export interface CreateOrderResult {
+  ok: true;
+  order_id: string;
+  amount: number;
+  currency: string;
+  key_id: string;
+  plan: string;
+}
+
+export interface CreditedAccountResult {
+  ok: true;
+  already_processed: boolean;
+  credits: number;
+  file_scans_allowed: number;
+  pro_unlimited_url: boolean;
+  plan_key: string;
+  plan_label: string;
+}
+
+export interface PaymentStatusResult {
+  ok: true;
+  captured: boolean;
+  already_processed?: boolean;
+  credits?: number;
+  file_scans_allowed?: number;
+  pro_unlimited_url?: boolean;
+  plan_key?: string;
+  plan_label?: string;
 }

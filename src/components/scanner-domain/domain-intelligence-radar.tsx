@@ -53,9 +53,9 @@ export function DomainIntelligenceRadar({
         <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[var(--text-secondary)]">
           <Settings className="h-4 w-4 text-[var(--orange-light)]" /> Domain Intelligence
         </span>
-        <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--safe)]">
+        {/* <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--safe)]">
           <span data-status-dot className="h-1.5 w-1.5 rounded-full bg-[var(--safe)]" /> Engine Online
-        </span>
+        </span> */}
       </div>
 
       <div data-radar className="relative mx-auto mt-5 aspect-square w-full max-w-[260px]">

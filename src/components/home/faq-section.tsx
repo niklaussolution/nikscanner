@@ -21,10 +21,6 @@ const FAQS = [
     q: "How does community reporting work?",
     a: "Anyone can report a suspicious URL. Reports enter a moderation queue and are only reflected in public reputation data once verified — a single unverified report never labels a site malicious.",
   },
-  {
-    q: "Do you have an API?",
-    a: "Yes — the NIKSCANNER API lets you run URL, file, domain and IP scans programmatically. See the Developers section for documentation and SDKs.",
-  },
 ];
 
 export function FaqSection() {
@@ -32,9 +28,9 @@ export function FaqSection() {
 
   return (
     <section className="border-t border-border-subtle bg-secondary-dark py-24">
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-flame-bright">FAQ</p>
+          {/* <p className="text-xs font-semibold uppercase tracking-widest text-flame-bright">FAQ</p> */}
           <h2 className="mt-3 font-heading text-3xl font-bold text-white sm:text-4xl">Frequently asked questions</h2>
         </div>
 

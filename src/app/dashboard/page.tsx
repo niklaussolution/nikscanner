@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ScanLine, ShieldAlert, Ban, Trophy, Loader2, CreditCard } from "lucide-react";
+import { ScanLine, ShieldAlert, Ban, Trophy, Loader2, CreditCard, FileCog } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ThreatTrendChart } from "@/components/dashboard/threat-trend-chart";
 import { RiskBadge } from "@/components/scanner/risk-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { authedJson } from "@/lib/firebase/api";
+import { THREAT_SEVERITY_LEVELS } from "@/types/scan";
 import type {
   ScanHistoryEntry,
   ScanHistoryResult,
@@ -18,8 +19,6 @@ import type {
   UserBlocklistResult,
 } from "@/lib/firebase/nikscanner-types";
 
-const THREAT_SEVERITY_LEVELS = new Set(["SUSPICIOUS", "HIGH_RISK", "MALICIOUS"]);
-
 interface OverviewData {
   balance: CreditsBalanceResult;
   points: PointsResult;
@@ -28,6 +27,7 @@ interface OverviewData {
   totalScans: number;
   threatsCount: number;
   recentScans: ScanHistoryEntry[];
+  allScans: ScanHistoryEntry[];
 }
 
 export default function DashboardOverviewPage() {
@@ -58,6 +58,7 @@ export default function DashboardOverviewPage() {
           totalScans: allScans.length,
           threatsCount: allScans.filter((s) => THREAT_SEVERITY_LEVELS.has(s.threat_level)).length,
           recentScans: allScans.slice(0, 5),
+          allScans,
         });
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load dashboard data.");
@@ -74,7 +75,7 @@ export default function DashboardOverviewPage() {
       <div>
         <h1 className="font-heading text-2xl font-bold text-white">Overview</h1>
         <p className="mt-1 text-sm text-muted">
-          Welcome back{user?.displayName ? `, ${user.displayName}` : ""} — here&apos;s your security summary.
+          Welcome back{user?.displayName ? `, ${user.displayName}` : ""}
         </p>
       </div>
 
@@ -105,7 +106,7 @@ export default function DashboardOverviewPage() {
                 <CardTitle>Scan Activity (7 days)</CardTitle>
               </CardHeader>
               <CardContent>
-                <ThreatTrendChart />
+                <ThreatTrendChart scans={data.allScans} />
               </CardContent>
             </Card>
 
@@ -120,6 +121,11 @@ export default function DashboardOverviewPage() {
                     icon: ScanLine,
                     label: "Credits Remaining",
                     value: data.balance.pro_unlimited_url ? "Unlimited" : String(data.balance.credits),
+                  },
+                  {
+                    icon: FileCog,
+                    label: "File Scans Remaining",
+                    value: `${Math.max(data.balance.file_scans_allowed - data.balance.file_scans_used, 0)} / ${data.balance.file_scans_allowed}`,
                   },
                   { icon: Trophy, label: "Global Rank", value: data.rank.rank ? `#${data.rank.rank}` : "Unranked" },
                 ].map((row) => (

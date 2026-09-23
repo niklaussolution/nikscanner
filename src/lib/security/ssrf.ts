@@ -62,6 +62,10 @@ export function isBlockedIp(ip: string): boolean {
 export interface SsrfCheckResult {
   allowed: boolean;
   reason?: string;
+  /** "unresolvable" (no DNS records / lookup failure) is a weaker signal than the target
+   *  actually pointing at private/internal network space — callers that want to keep scanning
+   *  a dead link (e.g. to score it) instead of hard-rejecting can key off this. */
+  code?: "blocked_hostname" | "blocked_ip" | "unresolvable";
   resolvedIps?: string[];
 }
 
@@ -75,14 +79,14 @@ export async function assertPublicHostname(hostname: string): Promise<SsrfCheckR
   const normalized = hostname.trim().toLowerCase();
 
   if (BLOCKED_HOSTNAMES.has(normalized)) {
-    return { allowed: false, reason: "Target resolves to a blocked local hostname." };
+    return { allowed: false, reason: "Target resolves to a blocked local hostname.", code: "blocked_hostname" };
   }
   if (normalized.endsWith(".local") || normalized.endsWith(".internal")) {
-    return { allowed: false, reason: "Target uses a reserved internal TLD." };
+    return { allowed: false, reason: "Target uses a reserved internal TLD.", code: "blocked_hostname" };
   }
   if (net.isIP(normalized)) {
     if (isBlockedIp(normalized)) {
-      return { allowed: false, reason: "Target IP is in a private/reserved range." };
+      return { allowed: false, reason: "Target IP is in a private/reserved range.", code: "blocked_ip" };
     }
     return { allowed: true, resolvedIps: [normalized] };
   }
@@ -91,18 +95,19 @@ export async function assertPublicHostname(hostname: string): Promise<SsrfCheckR
     const records = await dns.lookup(normalized, { all: true, verbatim: true });
     const ips = records.map((r) => r.address);
     if (ips.length === 0) {
-      return { allowed: false, reason: "Hostname did not resolve." };
+      return { allowed: false, reason: "Hostname did not resolve.", code: "unresolvable" };
     }
     const blocked = ips.filter(isBlockedIp);
     if (blocked.length > 0) {
       return {
         allowed: false,
         reason: `Target resolves to a blocked internal address (${blocked.join(", ")}).`,
+        code: "blocked_ip",
         resolvedIps: ips,
       };
     }
     return { allowed: true, resolvedIps: ips };
   } catch {
-    return { allowed: false, reason: "Hostname could not be resolved." };
+    return { allowed: false, reason: "Hostname could not be resolved.", code: "unresolvable" };
   }
 }

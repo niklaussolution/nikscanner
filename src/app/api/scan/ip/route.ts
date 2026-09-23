@@ -8,6 +8,8 @@ import { providersFor } from "@/lib/providers";
 import { computeRisk, buildEvidence } from "@/lib/risk-engine";
 import { lookupIpGeo } from "@/lib/domain-intel/ip-geo";
 import { isTorExitNode } from "@/lib/domain-intel/tor-exit-list";
+import { checkBlocklist } from "@/lib/url-scan/blocklist";
+import { scoreToThreatLevel } from "@/types/scan";
 import type { IpScanPayload, EngineResult } from "@/types/scan";
 
 export const runtime = "nodejs";
@@ -63,11 +65,19 @@ export async function POST(req: Request) {
   }
 
   const providers = providersFor("ip");
+  // IPv6 literals need bracketing to form a valid URL authority (https://[::1], not
+  // https://::1, which the URL parser would misread as a scheme-relative path).
+  const blocklistUrl = `https://${family === 6 ? `[${address}]` : address}`;
 
-  const [settledEngines, geo, tor] = await Promise.all([
+  const [settledEngines, geo, tor, blocklist] = await Promise.all([
     Promise.allSettled(providers.map((p) => p.run({ targetType: "ip", target: address }))),
     lookupIpGeo(address),
     isTorExitNode(address),
+    // Reuses the exact same community blocklist (and normalization) the URL/domain scanners
+    // check — an IP is stored/looked-up as https://<address>, same convention the domain
+    // scanner already uses for a target with no path. Website-only, like the domain scanner —
+    // the mobile app has no IP scanner to wire this into.
+    checkBlocklist(blocklistUrl),
   ]);
 
   // A provider's own run() throwing (network timeout, etc.) marks just that
@@ -83,7 +93,21 @@ export async function POST(req: Request) {
 
   const anyProviderUnavailable = engines.some((e) => e.unavailable);
 
-  const { score, threatLevel, confidence } = computeRisk(engines);
+  const risk = computeRisk(engines);
+  let score = risk.score;
+  const evidence = buildEvidence(engines);
+  if (blocklist?.hit && blocklist.category) {
+    // A real community report shouldn't be diluted by the mocked reputation engines requiring
+    // corroboration — same floor-not-average treatment as the URL/domain pipelines.
+    score = Math.max(score, blocklist.category === "malicious" || blocklist.category === "phishing" ? 100 : 70);
+    evidence.unshift({
+      label: "Community blocklist",
+      value: `Already reported by ${blocklist.blockedBy ?? "a community member"} as ${blocklist.category}`,
+      tone: "bad",
+    });
+  }
+  const threatLevel = scoreToThreatLevel(score);
+  const { confidence } = risk;
   const externalProviders = providers.filter((p) => !["internal-engine", "community-reports"].includes(p.id));
   const isDemo = externalProviders.every((p) => !p.isConfigured());
 
@@ -98,7 +122,7 @@ export async function POST(req: Request) {
     threatLevel,
     confidence,
     engines,
-    evidence: buildEvidence(engines),
+    evidence,
     createdAt: new Date().toISOString(),
     demo: isDemo,
     geo: geo ? { city: geo.city, region: geo.region, country: geo.country } : null,
@@ -107,6 +131,8 @@ export async function POST(req: Request) {
     privacy: { proxy: geo?.proxy ?? null, tor },
     providerCount: providers.length,
     partial,
+    blocklistHit: blocklist?.hit ?? false,
+    ...(blocklist?.blockedBy ? { blockedBy: blocklist.blockedBy } : {}),
   };
 
   return NextResponse.json(payload, {

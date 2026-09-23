@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { MotionPathPlugin } from "gsap/MotionPathPlugin";
 import { Shield } from "lucide-react";
+import { publicJson } from "@/lib/firebase/api";
+import type { LeaderboardResult } from "@/lib/firebase/nikscanner-types";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
@@ -23,16 +25,25 @@ interface NodeDef {
   side: "left" | "right";
 }
 
-const NODES: NodeDef[] = [
-  { id: "AK", reports: 3, x: 110, y: 60, side: "left" },
-  { id: "MG", reports: 12, x: 90, y: 155, side: "left" },
-  { id: "JT", reports: 7, x: 90, y: 250, side: "left" },
-  { id: "SP", reports: 5, x: 110, y: 340, side: "left" },
-  { id: "RL", reports: 9, x: 690, y: 60, side: "right" },
-  { id: "KM", reports: 4, x: 710, y: 155, side: "right" },
-  { id: "DV", reports: 11, x: 710, y: 250, side: "right" },
-  { id: "TS", reports: 6, x: 690, y: 340, side: "right" },
+// Same 8 fixed slot positions the hand-drawn network always used — real leaders are dropped
+// into these slots by rank, so the layout never changes, only who's shown in it.
+const POSITIONS: Omit<NodeDef, "id" | "reports">[] = [
+  { x: 110, y: 60, side: "left" },
+  { x: 90, y: 155, side: "left" },
+  { x: 90, y: 250, side: "left" },
+  { x: 110, y: 340, side: "left" },
+  { x: 690, y: 60, side: "right" },
+  { x: 710, y: 155, side: "right" },
+  { x: 710, y: 250, side: "right" },
+  { x: 690, y: 340, side: "right" },
 ];
+
+/** Same 2-letter monogram convention MonogramAvatar uses elsewhere on the site (e.g. the
+ *  leaderboard) — first letter of up to the first two "words" in the display name. */
+function initialsFor(name: string): string {
+  const parts = name.split(/[_\-\s]/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase());
+  return parts.join("") || name.slice(0, 2).toUpperCase();
+}
 
 function nodePath(n: NodeDef) {
   const mx = n.x + (CX - n.x) * 0.55;
@@ -46,11 +57,27 @@ function prefersReducedMotion() {
 export function SignalNetwork() {
   const rootRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const [nodes, setNodes] = useState<NodeDef[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    publicJson<LeaderboardResult>("/api/leaderboard?limit=8")
+      .then((res) => {
+        if (cancelled) return;
+        setNodes(res.leaders.slice(0, 8).map((leader, i) => ({ ...POSITIONS[i], id: initialsFor(leader.name), reports: leader.count })));
+      })
+      .catch(() => {
+        // Non-fatal — the network just renders with no nodes until this succeeds.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const root = rootRef.current;
     const svg = svgRef.current;
-    if (!root || !svg) return;
+    if (!root || !svg || nodes.length === 0) return;
     const reduced = prefersReducedMotion();
 
     const ctx = gsap.context(() => {
@@ -117,7 +144,7 @@ export function SignalNetwork() {
     }, root);
 
     return () => ctx.revert();
-  }, []);
+  }, [nodes]);
 
   return (
     <div ref={rootRef} className="relative mt-10">
@@ -141,11 +168,11 @@ export function SignalNetwork() {
 
           <rect x="0" y="0" width={VB_W} height={VB_H} fill="url(#netGlow)" />
 
-          {NODES.map((n) => (
-            <path key={n.id} data-net-path d={nodePath(n)} fill="none" stroke="url(#netRouteGradient)" strokeWidth="1.4" />
+          {nodes.map((n, i) => (
+            <path key={`path-${i}`} data-net-path d={nodePath(n)} fill="none" stroke="url(#netRouteGradient)" strokeWidth="1.4" />
           ))}
-          {NODES.map((n, i) => (
-            <circle key={`p-${n.id}`} data-net-packet={i} r="2.6" fill="#fff3e8" opacity="0.95" />
+          {nodes.map((n, i) => (
+            <circle key={`p-${i}`} data-net-packet={i} r="2.6" fill="#fff3e8" opacity="0.95" />
           ))}
 
           <circle data-hub-pulse cx={CX} cy={CY} r="34" fill="none" stroke="rgba(255,90,0,0.35)" strokeWidth="1.5" />
@@ -162,9 +189,9 @@ export function SignalNetwork() {
         </div>
 
         {/* node badges */}
-        {NODES.map((n) => (
+        {nodes.map((n, i) => (
           <div
-            key={n.id}
+            key={`node-${i}`}
             data-net-node
             className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-2"
             style={{ left: `${(n.x / VB_W) * 100}%`, top: `${(n.y / VB_H) * 100}%`, flexDirection: n.side === "right" ? "row-reverse" : "row" }}

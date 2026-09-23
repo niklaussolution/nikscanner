@@ -10,6 +10,8 @@ import { lookupDnsRecords } from "@/lib/domain-intel/dns";
 import { lookupWhois } from "@/lib/domain-intel/whois";
 import { inspectTls } from "@/lib/domain-intel/tls";
 import { lookupIpInfo } from "@/lib/domain-intel/ip-info";
+import { checkBlocklist } from "@/lib/url-scan/blocklist";
+import { scoreToThreatLevel } from "@/types/scan";
 import type { DomainScanPayload, EngineResult } from "@/types/scan";
 
 export const runtime = "nodejs";
@@ -54,16 +56,35 @@ export async function POST(req: Request) {
 
   const providers = providersFor("domain");
 
-  const [engines, dns, whois, tlsInfo] = await Promise.all([
+  const [engines, dns, whois, tlsInfo, blocklist] = await Promise.all([
     Promise.all(providers.map((p) => p.run({ targetType: "domain", target: hostname, hostname }))),
     lookupDnsRecords(hostname),
     lookupWhois(hostname),
     inspectTls(hostname),
+    // Reuses the exact same community blocklist (and the same normalization) the URL scanner
+    // checks — a domain is just a URL with no path, and this backend has no domain-specific
+    // blocklist, so a domain-level block is stored/looked-up as https://<hostname>. Website-only
+    // — the mobile app doesn't have a domain scanner to wire this into.
+    checkBlocklist(`https://${hostname}`),
   ]);
 
   const ipInfo = dns.a && dns.a[0] ? await lookupIpInfo(dns.a[0]) : null;
 
-  const { score, threatLevel, confidence } = computeRisk(engines as EngineResult[]);
+  const risk = computeRisk(engines as EngineResult[]);
+  let score = risk.score;
+  const evidence = buildEvidence(engines as EngineResult[]);
+  if (blocklist?.hit && blocklist.category) {
+    // A real community report shouldn't be diluted by the mocked reputation engines requiring
+    // corroboration — same floor-not-average treatment as the URL pipeline and the file scanner.
+    score = Math.max(score, blocklist.category === "malicious" || blocklist.category === "phishing" ? 100 : 70);
+    evidence.unshift({
+      label: "Community blocklist",
+      value: `Already reported by ${blocklist.blockedBy ?? "a community member"} as ${blocklist.category}`,
+      tone: "bad",
+    });
+  }
+  const threatLevel = scoreToThreatLevel(score);
+  const { confidence } = risk;
   const externalProviders = providers.filter((p) => !["internal-engine", "community-reports"].includes(p.id));
   const isDemo = externalProviders.every((p) => !p.isConfigured());
 
@@ -77,7 +98,7 @@ export async function POST(req: Request) {
     threatLevel,
     confidence,
     engines: engines as EngineResult[],
-    evidence: buildEvidence(engines as EngineResult[]),
+    evidence,
     createdAt: new Date().toISOString(),
     demo: isDemo,
     whois,
@@ -86,6 +107,8 @@ export async function POST(req: Request) {
     ipInfo,
     providerCount: providers.length,
     partial,
+    blocklistHit: blocklist?.hit ?? false,
+    ...(blocklist?.blockedBy ? { blockedBy: blocklist.blockedBy } : {}),
   };
 
   return NextResponse.json(payload, {

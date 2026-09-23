@@ -40,8 +40,18 @@ export function computeRisk(engines: EngineResult[]): RiskAssessment {
   return { score, threatLevel: scoreToThreatLevel(score), confidence };
 }
 
+/** Several demo/mock providers frequently share the exact same detail text (e.g. "Demo mode —
+ *  provider API key not configured"), which would otherwise repeat near-verbatim in the
+ *  evidence list under a different engine name each time. Deduplicated by value text so the
+ *  displayed evidence — and the phishing-signal summary built from it — only shows each
+ *  distinct signal once. */
 export function buildEvidence(engines: EngineResult[]): ScanEvidence[] {
-  return engines
-    .filter((e) => e.detail)
-    .map((e) => ({ label: e.name, value: e.detail as string, tone: "warn" as const }));
+  const seen = new Set<string>();
+  const evidence: ScanEvidence[] = [];
+  for (const e of engines) {
+    if (!e.detail || seen.has(e.detail)) continue;
+    seen.add(e.detail);
+    evidence.push({ label: e.name, value: e.detail, tone: "warn" });
+  }
+  return evidence;
 }

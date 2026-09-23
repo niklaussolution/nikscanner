@@ -19,6 +19,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ReportForm } from "@/components/community/report-form";
+import { publicJson } from "@/lib/firebase/api";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -34,17 +35,48 @@ interface Report {
   url: string;
   category: string;
   time: string;
-  trust: number;
+  reporterCount: number | null;
   status: Status;
   icon: LucideIcon;
 }
 
-const REPORTS: Report[] = [
-  { url: "secure-login-verify.xyz", category: "Phishing", time: "2m ago", trust: 98, status: "Verified", icon: ShieldAlert },
-  { url: "free-crypto-airdrop.io", category: "Crypto Scam", time: "8m ago", trust: 76, status: "Under Review", icon: Database },
-  { url: "update-your-billing.net", category: "Credential Theft", time: "14m ago", trust: 92, status: "Verified", icon: CreditCard },
-  { url: "download-cracked-app.ru", category: "Malware", time: "21m ago", trust: 88, status: "Verified", icon: Bug },
-];
+interface BlocklistEntry {
+  url: string;
+  category: string;
+  blocked_by: string;
+  reported_at: number;
+  reporter_count?: number;
+}
+
+// The real backend only ever hands out /api/blocklist entries once they've cleared
+// CONFIRM_THRESHOLD independent reporters — there's no public "pending" state to show, so
+// every real report here is "Verified" (the "Under Review" filter stays honest: it's simply
+// empty for real data instead of being backed by a fabricated pending report).
+const CATEGORY_META: Record<string, { label: string; icon: LucideIcon }> = {
+  malicious: { label: "Malware", icon: Bug },
+  phishing: { label: "Phishing", icon: ShieldAlert },
+  tracking: { label: "Tracking", icon: Database },
+  suspicious: { label: "Suspicious", icon: CreditCard },
+};
+
+function timeAgo(ms: number): string {
+  const diff = Date.now() - ms;
+  const mins = Math.max(0, Math.round(diff / 60000));
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  return `${days}d ago`;
+}
+
+function hostnameOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
 
 const FILTERS = ["All", "Verified", "Under Review"] as const;
 
@@ -61,8 +93,37 @@ export function CommunityReportsPanel() {
   const quickY = useRef<gsap.QuickToFunc | null>(null);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [modalOpen, setModalOpen] = useState(false);
+  const [reports, setReports] = useState<Report[]>([]);
 
-  const visible = REPORTS.filter((r) => filter === "All" || r.status === filter);
+  useEffect(() => {
+    let cancelled = false;
+    publicJson<{ count: number; entries: BlocklistEntry[] }>("/api/blocklist?limit=4")
+      .then((res) => {
+        if (cancelled) return;
+        const recentFirst = [...res.entries].reverse().slice(0, 4);
+        setReports(
+          recentFirst.map((e) => {
+            const meta = CATEGORY_META[e.category] ?? { label: e.category, icon: ShieldAlert };
+            return {
+              url: hostnameOf(e.url),
+              category: meta.label,
+              time: timeAgo(e.reported_at),
+              reporterCount: e.reporter_count ?? null,
+              status: "Verified",
+              icon: meta.icon,
+            };
+          }),
+        );
+      })
+      .catch(() => {
+        // Non-fatal — the panel just shows its empty state.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const visible = reports.filter((r) => filter === "All" || r.status === filter);
 
   useEffect(() => {
     const panel = panelRef.current;
@@ -148,7 +209,7 @@ export function CommunityReportsPanel() {
     }, panel);
 
     return () => ctx.revert();
-  }, []);
+  }, [reports]);
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     if (prefersReducedMotion()) return;
@@ -187,12 +248,12 @@ export function CommunityReportsPanel() {
               <p className="mt-0.5 text-xs text-muted">Real reports. Real impact. A safer internet together.</p>
             </div>
           </div>
-          <span
+          {/* <span
             data-live-badge
             className="flex shrink-0 items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-success"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-success" /> Live
-          </span>
+          </span> */}
         </div>
 
         {/* filters + report button */}
@@ -223,11 +284,16 @@ export function CommunityReportsPanel() {
 
         {/* report rows */}
         <div className="mt-4 space-y-2.5">
+          {visible.length === 0 && (
+            <p className="py-4 text-center text-sm text-muted">
+              {filter === "Under Review" ? "No reports are currently under review." : "No blocked URLs reported yet."}
+            </p>
+          )}
           {visible.map((r, i) => {
             const active = i === 0 && filter === "All";
             return (
               <button
-                key={r.url}
+                key={`${r.url}-${i}`}
                 data-report-row
                 type="button"
                 className={cn(
@@ -256,9 +322,11 @@ export function CommunityReportsPanel() {
                   <div className="flex shrink-0 items-center gap-3">
                     <div className="hidden text-right sm:block">
                       <p className="text-[11px] text-muted">{r.time}</p>
-                      <p className="text-[11px] font-semibold text-soft-white">
-                        Trust <span className="text-flame-bright">{r.trust}</span>
-                      </p>
+                      {r.reporterCount !== null && (
+                        <p className="text-[11px] font-semibold text-soft-white">
+                          Confirmed by <span className="text-flame-bright">{r.reporterCount}</span>
+                        </p>
+                      )}
                     </div>
                     <span
                       className={cn(
@@ -272,12 +340,12 @@ export function CommunityReportsPanel() {
                     {/* <ChevronRight className="h-4 w-4 text-muted transition-transform group-hover:translate-x-0.5" /> */}
                   </div>
                 </div>
-
+{/* 
                 {active && (
                   <div className="mt-3 h-[2px] w-full overflow-hidden rounded-full bg-white/5">
                     <div data-active-trace className="h-full w-full origin-left rounded-full bg-gradient-to-r from-flame-primary via-flame-bright to-flame-primary" />
                   </div>
-                )}
+                )} */}
               </button>
             );
           })}
