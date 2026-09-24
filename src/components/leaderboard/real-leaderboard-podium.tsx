@@ -21,11 +21,11 @@ function PodiumCard({ entry, place }: { entry: LeaderboardEntry; place: 1 | 2 | 
           : "border-[var(--border-muted)] bg-[var(--surface-soft)]",
       )}
     >
-      {isFirst && (
+      {/* {isFirst && (
         <span aria-hidden className="podium-crown-float absolute -top-6 left-1/2 -translate-x-1/2 text-[var(--orange-light)]">
           <Crown className="h-8 w-8" fill="currentColor" />
         </span>
-      )}
+      )} */}
 
       <span
         className={cn(

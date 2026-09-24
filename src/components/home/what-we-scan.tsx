@@ -357,14 +357,14 @@ export function WhatWeScan() {
               <div className="absolute h-[78%] w-[78%] rounded-full border border-flame-primary/20" />
               <div className="absolute h-[56%] w-[56%] rounded-full border border-flame-primary/25" />
 
-              <div className="relative flex flex-col items-center pt-8">
+              <div className="relative flex flex-col items-center pt-12">
                 <div className="flex h-24 w-24 items-center justify-center rounded-full border border-flame-primary/40 bg-flame-primary/10">
                   <Shield className="h-11 w-11 text-flame-bright" strokeWidth={1.5} />
                 </div>
-                <p className="mt-4 whitespace-nowrap text-xs font-bold uppercase tracking-widest text-white">Unified Scan Engine</p>
-                {/* <p className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-success">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Online
-                </p> */}
+                <p className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-success">
+                  NIKSCANNER
+                </p>
+                <p className="mt-3 whitespace-nowrap text-xs font-bold uppercase tracking-widest text-white">Unified Scan Engine</p>
               </div>
             </div>
 
