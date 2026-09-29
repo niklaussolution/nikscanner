@@ -29,7 +29,7 @@ export default function UrlScannerPage() {
           />
 
           <div className="relative z-10 mx-auto max-w-[1500px]">
-            <ScannerIntro />
+            <ScannerIntro useTechText />
             <ScannerStatusRow />
             <div className="mt-10">
               <ScannerWorkspace />

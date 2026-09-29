@@ -124,8 +124,8 @@ export default function DashboardOverviewPage() {
                   },
                   {
                     icon: FileCog,
-                    label: "File Scans Remaining",
-                    value: `${Math.max(data.balance.file_scans_allowed - data.balance.file_scans_used, 0)} / ${data.balance.file_scans_allowed}`,
+                    label: "File Scans Used",
+                    value: `${Math.min(data.balance.file_scans_used, data.balance.file_scans_allowed)} / ${data.balance.file_scans_allowed}`,
                   },
                   { icon: Trophy, label: "Global Rank", value: data.rank.rank ? `#${data.rank.rank}` : "Unranked" },
                 ].map((row) => (
@@ -153,7 +153,7 @@ export default function DashboardOverviewPage() {
                   No scans yet — scans you run on the website will show up here.
                 </p>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="scrollbar-hidden overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
                       <tr className="border-b border-border-subtle text-xs uppercase tracking-wider text-muted">

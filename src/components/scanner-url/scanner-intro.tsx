@@ -2,18 +2,24 @@
 
 import { Link as LinkIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import TechText from "@/components/ui/TechText";
 
 export function ScannerIntro({
   pillIcon: PillIcon = LinkIcon,
   // pillText = "URL Scanner",
-  headingPrefix = "Analyze any link ",
+  headingPrefix = "Inspect any ",
   headingHighlight = "before you click.",
+  /** Only the URL scanner's own intro renders the animated "URLs" TechText in place of
+   *  headingHighlight — every other scanner intro (file/domain/ip/qr) just shows its own
+   *  headingHighlight text like normal. */
+  useTechText = false,
   subtitle = "Reputation, SSL, redirect chains, domain age and phishing indicators — checked in seconds.",
 }: {
   pillIcon?: LucideIcon;
   pillText?: string;
   headingPrefix?: string;
   headingHighlight?: string;
+  useTechText?: boolean;
   subtitle?: string;
 }) {
   return (
@@ -32,8 +38,25 @@ export function ScannerIntro({
         style={{ fontSize: "clamp(2.625rem, 4vw, 3.875rem)", lineHeight: 1.05 }}
       >
         {headingPrefix}
+        {useTechText && (
+          <span
+            className="relative -mb-1 inline-block h-[1.55em] w-[2.5em] align-middle"
+            style={{ fontSize: "inherit" }}
+          >
+            <TechText
+              text="URLs"
+              color="#ff5500"
+              accentColor="#ff5500"
+              draggable={false}
+              speed={0.7}
+              specks={13}
+              fontSize={110}
+              fontWeight={800}
+            />
+          </span>
+        )}
         <span className="relative inline-block text-[var(--orange)]">
-          {headingHighlight}
+          {!useTechText && headingHighlight}
           <svg
             aria-hidden
             viewBox="0 0 320 14"
@@ -52,7 +75,7 @@ export function ScannerIntro({
         </span>
       </h1>
 
-      <p data-intro-subtitle className="mx-auto mt-4 max-w-2xl text-lg text-[var(--text-secondary)]">
+      <p data-intro-subtitle className="mx-auto mt-2 max-w-2xl text-lg text-[var(--text-secondary)]">
         {subtitle}
       </p>
     </div>

@@ -15,7 +15,7 @@ export function LegalPage({
     <>
       <Navbar />
       <main className="flex-1 bg-bg-black">
-        <PageHeader eyebrow="Legal" title={title} description={`Last updated ${updated}`} />
+        <PageHeader title={title} description={`Last updated ${updated}`} />
         <section className="mx-auto max-w-3xl space-y-6 px-4 py-16 text-sm leading-relaxed text-muted sm:px-6 lg:px-8">
           {children}
         </section>

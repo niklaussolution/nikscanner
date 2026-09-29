@@ -10,7 +10,7 @@ export default function AboutPage() {
     <>
       <Navbar />
       <main className="flex-1 bg-bg-black">
-        <PageHeader eyebrow="Company" title="About NIKSCANNER" description="Global threat intelligence, built for everyone." />
+        <PageHeader title="About NIKSCANNER" description="Global threat intelligence, built for everyone." />
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <ComingSoon feature="Our company story" />
         </div>

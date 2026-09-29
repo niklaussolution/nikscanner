@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import gsap from "gsap";
 import { Crown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { publicJson } from "@/lib/firebase/api";
@@ -36,7 +37,7 @@ function PodiumCard({ entry, place }: { entry: LeaderboardEntry; place: 1 | 2 | 
         {String(place).padStart(2, "0")}
       </span>
 
-      <MonogramAvatar username={entry.name} size={isFirst ? 72 : 60} />
+      <MonogramAvatar username={entry.name} src={entry.avatar} size={isFirst ? 72 : 60} />
 
       <p className={cn("mt-3 font-bold text-[var(--white)]", isFirst ? "text-lg" : "text-base")}>{entry.name}</p>
       {entry.country && <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">{entry.country}</p>}
@@ -45,6 +46,10 @@ function PodiumCard({ entry, place }: { entry: LeaderboardEntry; place: 1 | 2 | 
         {entry.count.toLocaleString()}
       </p>
       <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">URLs Blocked</p>
+
+      <p className={cn("mt-2 font-bold text-[var(--orange-light)]", isFirst ? "text-base" : "text-sm")}>
+        {(entry.points ?? 0).toLocaleString()} Points
+      </p>
     </div>
   );
 }
@@ -55,12 +60,24 @@ function PodiumCard({ entry, place }: { entry: LeaderboardEntry; place: 1 | 2 | 
 export function RealLeaderboardPodium() {
   const [leaders, setLeaders] = useState<LeaderboardEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const podiumRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     publicJson<LeaderboardResult>("/api/leaderboard?limit=3")
       .then((res) => setLeaders(res.leaders))
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load leaderboard."));
   }, []);
+
+  useEffect(() => {
+    const podium = podiumRef.current;
+    if (!podium || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const cards = podium.querySelectorAll("[data-podium-card]");
+    if (cards.length === 0) return;
+    const tween = gsap.fromTo(cards, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.12, ease: "power3.out" });
+    return () => {
+      tween.kill();
+    };
+  }, [leaders]);
 
   if (error) return <p className="text-sm text-[var(--danger)]">{error}</p>;
 
@@ -76,7 +93,7 @@ export function RealLeaderboardPodium() {
   if (!first) return null;
 
   return (
-    <div data-podium className="grid grid-cols-1 items-end gap-4 sm:grid-cols-3 sm:gap-5">
+    <div ref={podiumRef} data-podium className="grid grid-cols-1 items-end gap-4 sm:grid-cols-3 sm:gap-5">
       <div className="sm:order-2 sm:-mb-4">
         <PodiumCard entry={first} place={1} />
       </div>

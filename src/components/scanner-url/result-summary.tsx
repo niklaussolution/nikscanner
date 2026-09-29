@@ -97,7 +97,7 @@ export function ResultSummary({
         </div>
       </div>
 
-      <div className="min-w-0 flex-1 text-center sm:text-left">
+      <div className="w-full min-w-0 flex-1 text-center sm:text-left">
         <span
           className={cn(
             "inline-block rounded-md border px-2.5 py-1 text-xs font-bold uppercase tracking-wide",

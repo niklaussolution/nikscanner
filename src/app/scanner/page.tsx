@@ -12,7 +12,6 @@ export default function ScannerPage() {
       <Navbar />
       <main className="flex-1 bg-bg-black">
         <PageHeader
-          eyebrow="Scanner"
           title="Universal Scanner"
           description="Scan a URL, domain or IP address against threat intelligence, reputation and behavioral signals."
         />

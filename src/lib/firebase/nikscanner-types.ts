@@ -21,12 +21,16 @@ export interface RankResult {
   rank: number | null;
   name: string;
   count: number;
+  points?: number;
 }
 
 export interface LeaderboardEntry {
   name: string;
   count: number;
   country: string | null;
+  points: number;
+  /** Profile picture as a small data URL, or null/absent when the user hasn't set one. */
+  avatar?: string | null;
 }
 
 export interface LeaderboardResult {
@@ -35,12 +39,22 @@ export interface LeaderboardResult {
 
 export interface ProfileResult {
   country: string | null;
+  avatar?: string | null;
+  /** Whether the user opted in to showing their photo on the public leaderboard. */
+  avatar_public?: boolean;
   deactivated: boolean;
+}
+
+export interface AvatarUpdateResult {
+  ok: true;
+  avatar: string | null;
+  avatar_public: boolean;
 }
 
 export interface ProfileUpdateResult {
   ok: true;
   country: string | null;
+  display_name?: string;
 }
 
 export interface CreditsBalanceResult {

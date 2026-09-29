@@ -16,6 +16,7 @@ import { DOMAIN_STAGES, type DomainScanState } from "@/components/scanner-domain
 import { normalizeAndValidateDomain } from "@/lib/validation/domain";
 import { THREAT_LEVEL_LABEL, type DomainScanPayload } from "@/types/scan";
 import { logScanIfSignedIn } from "@/lib/firebase/log-scan";
+import { categorizeScan } from "@/lib/scan/categorize";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { fetchRecentScans } from "@/lib/firebase/scan-history";
 import { formatRelativeTime } from "@/lib/format-time";
@@ -165,11 +166,14 @@ export function DomainScannerWorkspace() {
         { opacity: 0, y: 60, scale: 0.98 },
         { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: "power3.out", scrollTrigger: { trigger: root, start: "top 82%", once: true } },
       );
-      gsap.fromTo(
-        "[data-analysis-card]",
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.5, stagger: 0.08, delay: 0.3, ease: "power2.out", scrollTrigger: { trigger: root, start: "top 82%", once: true } },
-      );
+      const analysisCards = root.querySelectorAll("[data-analysis-card]");
+      if (analysisCards.length > 0) {
+        gsap.fromTo(
+          analysisCards,
+          { opacity: 0, y: 20 },
+          { opacity: 1, y: 0, duration: 0.5, stagger: 0.08, delay: 0.3, ease: "power2.out", scrollTrigger: { trigger: root, start: "top 82%", once: true } },
+        );
+      }
       gsap.fromTo(
         "[data-radar]",
         { opacity: 0, scale: 0.85 },
@@ -250,7 +254,7 @@ export function DomainScannerWorkspace() {
       setActiveStageIndex(DOMAIN_STAGES.length - 1);
       setResult(payload);
       setScanState(payload.partial ? "partial" : "complete");
-      logScanIfSignedIn({ target: payload.target, targetType: "domain", threatLevel: payload.threatLevel, score: payload.score });
+      logScanIfSignedIn({ target: payload.target, targetType: "domain", threatLevel: payload.threatLevel, score: payload.score, category: categorizeScan(payload) });
 
       const entry: RecentScanEntry = {
         id: payload.id,

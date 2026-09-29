@@ -10,7 +10,7 @@ export default function BlogPage() {
     <>
       <Navbar />
       <main className="flex-1 bg-bg-black">
-        <PageHeader eyebrow="Resources" title="Blog" description="Security research, product updates and guides." />
+        <PageHeader title="Blog" description="Security research, product updates and guides." />
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <ComingSoon feature="The blog" />
         </div>

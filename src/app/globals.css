@@ -2,7 +2,7 @@
 
 :root {
   /* Brand */
-  --flame-primary: #ff5a00;
+  --flame-primary: #ff5500;
   --flame-bright: #ff7a00;
   --flame-hot: #ff3d00;
   --flame-deep: #d94700;
@@ -109,6 +109,16 @@ body {
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background: rgba(255, 90, 0, 0.35);
   border-radius: 999px;
+}
+
+/* Scrollable content with no visible scrollbar track/thumb in either direction — the element
+   still scrolls (mouse wheel, touch, keyboard), only the browser's scrollbar chrome is hidden. */
+.scrollbar-hidden {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge/IE */
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge (Chromium) */
 }
 
 @keyframes scan-line {

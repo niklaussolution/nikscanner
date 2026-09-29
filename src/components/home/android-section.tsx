@@ -24,6 +24,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { PrimaryPhone } from "@/components/mobile/primary-phone";
 import { ScannerPhone } from "@/components/mobile/scanner-phone";
+import ScrollFloat from "@/components/ui/ScrollFloat";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -298,12 +299,12 @@ export function AndroidSection() {
             <h2 className="mt-4 font-heading text-4xl font-bold leading-[1.05] text-white sm:text-5xl">
               <span className="block overflow-hidden">
                 <span data-heading-mask className="inline-block">
-                  NIKSCANNER
+                  <ScrollFloat text="NIKSCANNER" splitBy="chars" />
                 </span>
               </span>
               <span className="block overflow-hidden">
                 <span data-heading-mask className="inline-block text-flame-bright">
-                  in your pocket.
+                  <ScrollFloat text="in your pocket." splitBy="words" />
                 </span>
               </span>
             </h2>

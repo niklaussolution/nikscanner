@@ -1,5 +1,6 @@
 import { firebaseAuth } from "@/lib/firebase/client";
 import type { ScanTargetType, ThreatLevel } from "@/types/scan";
+import type { ScanCategory } from "@/lib/scan/categorize";
 
 const NIKSCANNER_API_BASE_URL = process.env.NEXT_PUBLIC_NIKSCANNER_API_BASE_URL || "";
 
@@ -12,6 +13,8 @@ export async function logScanIfSignedIn(input: {
   targetType: ScanTargetType;
   threatLevel: ThreatLevel;
   score: number;
+  /** Threat category for flagged scans (see categorizeScan) — feeds the Threat Intelligence charts. */
+  category?: ScanCategory | null;
 }): Promise<void> {
   const user = firebaseAuth.currentUser;
   if (!user) return;

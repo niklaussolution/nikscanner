@@ -17,6 +17,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ScrollFloat from "@/components/ui/ScrollFloat";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
@@ -253,7 +254,8 @@ function MiniConnector({ vertical }: { vertical?: boolean }) {
   );
 }
 
-/** Continuous glowing pipeline spanning all four desktop cards, with travelling packets. */
+/** Continuous glowing pipeline spanning all four desktop cards, with travelling packets —
+ *  draws in once on scroll, then loops packets along it indefinitely. */
 function Pipeline() {
   const svgRef = useRef<SVGSVGElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
@@ -295,148 +297,67 @@ function Pipeline() {
   }, []);
 
   return (
-    // <svg
-    //   ref={svgRef}
-    //   viewBox="0 0 1000 100"
-    //   preserveAspectRatio="none"
-    //   className="pointer-events-none absolute inset-x-0 top-[168px] z-0 hidden h-24 w-full lg:block"
-    // >
-    //   <path
-    //     ref={pathRef}
-    //     d="M125,50 Q250,86 375,50 Q500,86 625,50 Q750,86 875,50"
-    //     fill="none"
-    //     stroke="url(#pipelineGradient)"
-    //     strokeWidth="2.5"
-    //     strokeLinecap="round"
-    //   />
-    //   <linearGradient id="pipelineGradient" x1="0" y1="0" x2="1" y2="0">
-    //     <stop offset="0%" stopColor="#ff5a00" />
-    //     <stop offset="50%" stopColor="#ff7a1a" />
-    //     <stop offset="100%" stopColor="#ff5a00" />
-    //   </linearGradient>
-    //   {[125, 375, 625, 875].map((x) => (
-    //     <circle key={x} cx={x} cy="50" r="4" fill="#ff7a1a" />
-    //   ))}
-    //   {[0, 1, 2].map((i) => (
-    //     <circle key={i} data-packet r="3.5" fill="#fff3e8" opacity="0.9" />
-    //   ))}
-    // </svg>
-
-
     <svg
-  ref={svgRef}
-  viewBox="0 0 1000 100"
-  preserveAspectRatio="none"
-  className="pointer-events-none absolute inset-x-0 top-[168px] z-0 hidden h-24 w-full lg:block"
->
-  <defs>
-    <linearGradient
-      id="pipelineGradient"
-      x1="0"
-      y1="0"
-      x2="1000"
-      y2="0"
-      gradientUnits="userSpaceOnUse"
+      ref={svgRef}
+      viewBox="0 0 1000 100"
+      preserveAspectRatio="none"
+      className="pointer-events-none absolute inset-x-0 top-[168px] z-0 hidden h-24 w-full lg:block"
     >
-      <stop offset="0%" stopColor="#ff5a00" />
-      <stop offset="25%" stopColor="#ff6a0a" />
-      <stop offset="50%" stopColor="#ff8a2b" />
-      <stop offset="75%" stopColor="#ff6a0a" />
-      <stop offset="100%" stopColor="#ff5a00" />
-    </linearGradient>
+      <defs>
+        <linearGradient id="pipelineGradient" x1="0" y1="0" x2="1000" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#ff5a00" />
+          <stop offset="25%" stopColor="#ff6a0a" />
+          <stop offset="50%" stopColor="#ff8a2b" />
+          <stop offset="75%" stopColor="#ff6a0a" />
+          <stop offset="100%" stopColor="#ff5a00" />
+        </linearGradient>
 
-    <filter
-      id="pipelineGlow"
-      x="-50%"
-      y="-50%"
-      width="200%"
-      height="200%"
-    >
-      <feGaussianBlur stdDeviation="2.5" result="blur" />
-      <feMerge>
-        <feMergeNode in="blur" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
-  </defs>
+        <filter id="pipelineGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
 
-  {/* Main pipeline */}
-  <path
-    ref={pathRef}
-    d="
-      M125,50
-      Q250,82 375,50
-      Q500,82 625,50
-      Q750,82 875,50
-    "
-    fill="none"
-    stroke="url(#pipelineGradient)"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  />
+      {/* Main pipeline */}
+      <path
+        ref={pathRef}
+        d="M125,50 Q250,82 375,50 Q500,82 625,50 Q750,82 875,50"
+        fill="none"
+        stroke="url(#pipelineGradient)"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
 
-  {/* Subtle glow behind the pipeline */}
-  <path
-    d="
-      M125,50
-      Q250,82 375,50
-      Q500,82 625,50
-      Q750,82 875,50
-    "
-    fill="none"
-    stroke="#ff6a0a"
-    strokeWidth="5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    opacity="0.12"
-    filter="url(#pipelineGlow)"
-  />
-
-  {/* Pipeline nodes */}
-  {[125, 375, 625, 875].map((x) => (
-    <g key={x}>
-      {/* Outer glow */}
-      <circle
-        cx={x}
-        cy="50"
-        r="7"
-        fill="#ff7a1a"
+      {/* Subtle glow behind the pipeline */}
+      <path
+        d="M125,50 Q250,82 375,50 Q500,82 625,50 Q750,82 875,50"
+        fill="none"
+        stroke="#ff6a0a"
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
         opacity="0.12"
+        filter="url(#pipelineGlow)"
       />
 
-      {/* Node ring */}
-      <circle
-        cx={x}
-        cy="50"
-        r="4.5"
-        fill="#0f0f0f"
-        stroke="#ff7a1a"
-        strokeWidth="1.5"
-      />
+      {/* Pipeline nodes */}
+      {[125, 375, 625, 875].map((x) => (
+        <g key={x}>
+          <circle cx={x} cy="50" r="7" fill="#ff7a1a" opacity="0.12" />
+          <circle cx={x} cy="50" r="4.5" fill="#0f0f0f" stroke="#ff7a1a" strokeWidth="1.5" />
+          <circle cx={x} cy="50" r="2" fill="#ff8a2b" />
+        </g>
+      ))}
 
-      {/* Node center */}
-      <circle
-        cx={x}
-        cy="50"
-        r="2"
-        fill="#ff8a2b"
-      />
-    </g>
-  ))}
-
-  {/* Animated data packets */}
-  {[0, 1, 2].map((i) => (
-    <circle
-      key={i}
-      data-packet
-      r="3.5"
-      fill="#fff3e8"
-      opacity="0.95"
-      filter="url(#pipelineGlow)"
-    />
-  ))}
-</svg>
+      {/* Animated data packets */}
+      {[0, 1, 2].map((i) => (
+        <circle key={i} data-packet r="3.5" fill="#fff3e8" opacity="0.95" filter="url(#pipelineGlow)" />
+      ))}
+    </svg>
   );
 }
 
@@ -492,7 +413,7 @@ function StepCard({ s, index }: { s: StepDef; index: number }) {
       <span
         data-step-number
         aria-hidden
-        className="pointer-events-none absolute left-1 top-0 z-0 select-none overflow-hidden font-heading text-7xl font-bold text-white/[0.20]"
+        className="pointer-events-none absolute left-1 top-0 z-20 select-none overflow-hidden font-heading text-7xl font-bold text-white/[0.20]"
         style={{ clipPath: "inset(0 100% 0 0)", textShadow: "0 0 24px rgba(255,90,0,0.25)" }}
       >
         {s.step}
@@ -678,19 +599,14 @@ export function HowItWorks() {
             Process
           </p> */}
           <h2 className="mt-3 font-heading text-3xl font-bold text-white sm:text-4xl">
-            <span data-heading-word className="inline-block">
-              How
-            </span>{" "}
-            <span data-heading-word className="inline-block text-flame-gradient">
-              NIKSCANNER
-            </span>{" "}
-            <span data-heading-word className="inline-block">
-              Works
-            </span>
+            <ScrollFloat text="How" splitBy="words" />{" "}
+            <ScrollFloat text="NIKSCANNER" splitBy="chars" className="text-[#ff5500]" />{" "}
+            <ScrollFloat text="Works" splitBy="chars" />
           </h2>
           <p data-heading-word className="mt-3 text-muted">
             From submission to protection in seconds.
           </p>
+          {/* <ScrollFloat text="From submission to protection in seconds." splitBy="chars" className="" />{" "} */}
         </div>
 
         <div className="relative mt-20">

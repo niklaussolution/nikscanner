@@ -29,7 +29,7 @@ export default function Home() {
         <CommunitySection />
         <AndroidSection />
         <PricingPreview />
-        <FaqSection />
+        {!user && <FaqSection />}
         {!user && <FinalCta />}
       </main>
       <Footer />

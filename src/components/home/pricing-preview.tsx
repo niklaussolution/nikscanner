@@ -81,8 +81,7 @@ export function PricingPreview() {
         defaults: { ease: "power3.out", duration: 0.8 },
       });
 
-      tl.fromTo("[data-eyebrow]", { opacity: 0, y: 18 }, { opacity: 1, y: 0 })
-        .fromTo("[data-heading]", { opacity: 0, y: 45 }, { opacity: 1, y: 0 }, "-=0.55")
+      tl.fromTo("[data-heading]", { opacity: 0, y: 45 }, { opacity: 1, y: 0 })
         .fromTo("[data-description]", { opacity: 0, y: 18 }, { opacity: 1, y: 0 }, "-=0.55")
         .fromTo(
           "[data-card]:not([data-featured])",

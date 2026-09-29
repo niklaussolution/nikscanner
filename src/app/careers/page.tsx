@@ -10,7 +10,7 @@ export default function CareersPage() {
     <>
       <Navbar />
       <main className="flex-1 bg-bg-black">
-        <PageHeader eyebrow="Company" title="Careers" description="Help build the global security layer for the internet." />
+        <PageHeader title="Careers" description="Help build the global security layer for the internet." />
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <ComingSoon feature="Open roles" />
         </div>

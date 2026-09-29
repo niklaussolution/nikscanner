@@ -12,7 +12,21 @@ function hashString(value: string): number {
   return hash;
 }
 
-export function MonogramAvatar({ username, size = 48 }: { username: string; size?: number }) {
+export function MonogramAvatar({ username, size = 48, src }: { username: string; size?: number; src?: string | null }) {
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- user-uploaded data URL, nothing for next/image to optimize
+      <img
+        src={src}
+        alt=""
+        width={size}
+        height={size}
+        className="shrink-0 rounded-full border border-white/15 object-cover"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+
   const initials = username
     .split(/[_\-\s]/)
     .filter(Boolean)

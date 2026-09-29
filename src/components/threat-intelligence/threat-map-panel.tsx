@@ -5,7 +5,10 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Shield, Calendar, Filter, ChevronDown, X, MoreHorizontal, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ThreatMap } from "@/components/threat-intelligence/threat-map";
+import { ThreatGlobe } from "@/components/threat-intelligence/threat-globe";
+import { publicJson } from "@/lib/firebase/api";
+import { formatRelativeTime } from "@/lib/format-time";
+import { THREAT_LEVEL_LABEL, type ThreatLevel } from "@/types/scan";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -15,12 +18,50 @@ function prefersReducedMotion() {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-const ACTIVITY = [
-  { label: "Malicious URL blocked", time: "2s ago", detail: "203.0.113.42", tone: "danger" as const },
-  { label: "APK signature match", time: "14s ago", detail: "com.malware.trick", tone: "warning" as const },
-  { label: "Phishing domain detected", time: "28s ago", detail: "secure-login.net", tone: "warning" as const },
-  { label: "Suspicious IP isolated", time: "41s ago", detail: "185.199.110.24", tone: "warning" as const },
-];
+interface RecentScan {
+  target: string;
+  target_type: "url" | "file" | "domain" | "qr";
+  threat_level: ThreatLevel;
+  created_at: number;
+}
+
+interface ActivityRow {
+  label: string;
+  detail: string;
+  time: string;
+  tone: "danger" | "warning";
+}
+
+const TYPE_NOUN: Record<RecentScan["target_type"], string> = {
+  url: "URL",
+  file: "File",
+  domain: "Domain",
+  qr: "QR Destination",
+};
+
+function hostnameOf(value: string): string {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return value;
+  }
+}
+
+/** Real, recent activity across every user — url/file/domain/qr only (no "ip" type), so this
+ *  never shows a raw IP address, only Suspicious/High Risk/Malicious results (GET
+ *  /api/scan/recent already restricts to that server-side, same privacy principle as the
+ *  community blocklist). */
+function buildActivityRow(scan: RecentScan): ActivityRow {
+  const noun = TYPE_NOUN[scan.target_type] ?? "Target";
+  const severity = scan.threat_level === "SUSPICIOUS" ? "flagged" : "blocked";
+  const detail = scan.target_type === "file" ? `${scan.target.slice(0, 16)}…` : hostnameOf(scan.target);
+  return {
+    label: `${THREAT_LEVEL_LABEL[scan.threat_level]} ${noun} ${severity}`,
+    detail,
+    time: formatRelativeTime(scan.created_at),
+    tone: scan.threat_level === "SUSPICIOUS" ? "warning" : "danger",
+  };
+}
 
 const TONE_DOT = { danger: "bg-danger", warning: "bg-flame-primary" } as const;
 
@@ -37,6 +78,15 @@ export function ThreatMapPanel() {
   const quickY = useRef<gsap.QuickToFunc | null>(null);
   const [activeControl, setActiveControl] = useState(0);
   const [alertOpen, setAlertOpen] = useState(true);
+  const [activity, setActivity] = useState<ActivityRow[]>([]);
+
+  useEffect(() => {
+    publicJson<{ scans: RecentScan[] }>("/api/scan/recent?limit=4&type=url,file,domain,qr")
+      .then((res) => setActivity(res.scans.map(buildActivityRow)))
+      .catch(() => {
+        // Non-fatal — the panel just shows its empty state until this succeeds.
+      });
+  }, []);
 
   useEffect(() => {
     const panel = panelRef.current;
@@ -45,18 +95,22 @@ export function ThreatMapPanel() {
 
     const ctx = gsap.context(() => {
       const cards = panel.querySelectorAll<HTMLElement>("[data-float-card]");
-      gsap.fromTo(
-        cards,
-        { opacity: 0, y: 16 },
-        { opacity: 1, y: 0, duration: 0.6, stagger: 0.15, delay: 0.4, ease: "power2.out" },
-      );
+      if (cards.length > 0) {
+        gsap.fromTo(
+          cards,
+          { opacity: 0, y: 16 },
+          { opacity: 1, y: 0, duration: 0.6, stagger: 0.15, delay: 0.4, ease: "power2.out" },
+        );
+      }
 
       const rows = panel.querySelectorAll<HTMLElement>("[data-activity-row]");
-      gsap.fromTo(
-        rows,
-        { opacity: 0, x: 16 },
-        { opacity: 1, x: 0, duration: 0.4, stagger: 0.1, delay: 0.6, ease: "power2.out" },
-      );
+      if (rows.length > 0) {
+        gsap.fromTo(
+          rows,
+          { opacity: 0, x: 16 },
+          { opacity: 1, x: 0, duration: 0.4, stagger: 0.1, delay: 0.6, ease: "power2.out" },
+        );
+      }
 
       if (!reduced) {
         cards.forEach((card, i) => {
@@ -103,7 +157,7 @@ export function ThreatMapPanel() {
       />
 
       {/* controls row */}
-      <div className="relative z-20 flex flex-wrap items-center gap-2 border-b border-border-subtle p-4">
+      {/* <div className="relative z-20 flex flex-wrap items-center gap-2 border-b border-border-subtle p-4">
         {CONTROLS.map((c, i) => (
           <button
             key={c.label}
@@ -120,20 +174,20 @@ export function ThreatMapPanel() {
             <ChevronDown className="h-3 w-3 opacity-60" />
           </button>
         ))}
-      </div>
+      </div> */}
 
       <div className="relative z-20 grid grid-cols-1 lg:grid-cols-[1fr_250px] lg:h-[500px]">
         {/* map area */}
         <div className="relative aspect-[1000/560] lg:aspect-auto lg:h-full">
-          <ThreatMap className="absolute inset-0 h-full w-full" />
+          <ThreatGlobe className="absolute inset-0 h-full w-full" />
 
           {/* Compact mobile overlay (replaces the two floating cards + legend) */}
-          <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full border border-flame-primary/40 bg-card-bg/95 px-3 py-1.5 text-[10px] font-semibold text-soft-white backdrop-blur sm:hidden">
+          {/* <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full border border-flame-primary/40 bg-card-bg/95 px-3 py-1.5 text-[10px] font-semibold text-soft-white backdrop-blur sm:hidden">
             <span aria-hidden>🇸🇬</span> Singapore <span className="text-danger">→</span> Frankfurt, DE
-          </div>
+          </div> */}
 
           {/* Attack origin card */}
-          <div
+          {/* <div
             data-float-card
             className="absolute bottom-6 left-4 hidden w-52 rounded-xl border border-flame-primary/40 bg-card-bg/95 p-3 shadow-xl shadow-black/50 backdrop-blur sm:block sm:left-6"
           >
@@ -143,10 +197,10 @@ export function ThreatMapPanel() {
             </p>
             <p className="mt-1 font-mono text-xs text-muted">103.27.184.91</p>
             <p className="text-xs font-semibold text-flame-bright">Botnet</p>
-          </div>
+          </div> */}
 
           {/* Threat intercepted card */}
-          {alertOpen && (
+          {/* {alertOpen && (
             <div
               data-float-card
               className="absolute right-4 top-16 hidden w-60 rounded-xl border border-danger/40 bg-card-bg/95 p-3 shadow-xl shadow-black/50 backdrop-blur sm:block sm:top-5 lg:right-8"
@@ -167,10 +221,10 @@ export function ThreatMapPanel() {
                 <MapPin className="h-3 w-3" /> Frankfurt, DE
               </p>
             </div>
-          )}
+          )} */}
 
           {/* legend */}
-          <div className="absolute bottom-4 right-4 hidden items-center gap-4 rounded-lg border border-border-subtle bg-card-bg/90 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted backdrop-blur sm:flex">
+          {/* <div className="absolute bottom-4 right-4 hidden items-center gap-4 rounded-lg border border-border-subtle bg-card-bg/90 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted backdrop-blur sm:flex">
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-flame-primary" /> Active
             </span>
@@ -180,7 +234,7 @@ export function ThreatMapPanel() {
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-white/20" /> Inactive
             </span>
-          </div>
+          </div> */}
         </div>
 
         {/* live activity panel */}
@@ -189,21 +243,25 @@ export function ThreatMapPanel() {
             <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-white">
               <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse-glow" /> Live Activity
             </span>
-            <MoreHorizontal className="h-4 w-4 text-muted" />
+            {/* <MoreHorizontal className="h-4 w-4 text-muted" /> */}
           </div>
           <div className="space-y-3">
-            {ACTIVITY.map((a) => (
-              <div key={a.label} data-activity-row className="flex items-start gap-2.5">
-                <span className={cn("mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full", TONE_DOT[a.tone])} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-xs font-semibold text-soft-white">{a.label}</p>
-                    <span className="shrink-0 text-[10px] text-muted">{a.time}</span>
+            {activity.length === 0 ? (
+              <p className="py-4 text-center text-xs text-muted">No flagged activity yet.</p>
+            ) : (
+              activity.map((a, i) => (
+                <div key={i} data-activity-row className="flex items-start gap-2.5">
+                  <span className={cn("mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full", TONE_DOT[a.tone])} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-xs font-semibold text-soft-white">{a.label}</p>
+                      <span className="shrink-0 text-[10px] text-muted">{a.time}</span>
+                    </div>
+                    <p className="truncate font-mono text-[11px] text-muted">{a.detail}</p>
                   </div>
-                  <p className="truncate font-mono text-[11px] text-muted">{a.detail}</p>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

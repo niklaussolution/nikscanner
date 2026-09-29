@@ -83,7 +83,7 @@ export default function ScanHistoryPage() {
                 : "No scans match this filter."}
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="scrollbar-hidden overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-border-subtle text-xs uppercase tracking-wider text-muted">

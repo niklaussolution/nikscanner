@@ -8,11 +8,13 @@ import { LayoutDashboard, LogOut } from "lucide-react";
 import type { User } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { cn } from "@/lib/utils";
+import { useProfileAvatar } from "@/lib/firebase/use-profile-avatar";
 
 export function UserMenu({ user, className }: { user: User; className?: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { avatar } = useProfileAvatar();
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -35,10 +37,15 @@ export function UserMenu({ user, className }: { user: User; className?: string }
     <div ref={ref} className={cn("relative", className)}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-flame-primary/15 text-sm font-semibold text-flame-bright ring-1 ring-inset ring-flame-primary/30 transition-colors hover:bg-flame-primary/25"
+        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-flame-primary/15 text-sm font-semibold text-flame-bright ring-1 ring-inset ring-flame-primary/30 transition-colors hover:bg-flame-primary/25"
         aria-label="Account menu"
       >
-        {initial}
+        {avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element -- user-uploaded data URL
+          <img src={avatar} alt="" className="h-full w-full object-cover" />
+        ) : (
+          initial
+        )}
       </button>
 
       {open && (

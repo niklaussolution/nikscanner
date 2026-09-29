@@ -4,12 +4,24 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { ArrowRight, ArrowUp, Shield, Link as LinkIcon, FileText, Globe } from "lucide-react";
+import { ArrowRight, ArrowUp, ArrowDown, Shield, Link as LinkIcon, FileText, Globe } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ThreatMapPanel } from "@/components/threat-intelligence/threat-map-panel";
+import { publicJson } from "@/lib/firebase/api";
+import ScrollFloat from "@/components/ui/ScrollFloat";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
+}
+
+interface DailyStats {
+  threats_detected_today: number;
+  threats_detected_yesterday: number;
+  urls_analyzed_today: number;
+  urls_analyzed_yesterday: number;
+  files_scanned_today: number;
+  files_scanned_yesterday: number;
+  countries: number;
 }
 
 interface MetricDef {
@@ -17,44 +29,46 @@ interface MetricDef {
   value: number;
   suffix: string;
   label: string;
-  trend: string;
-  spark: number[];
+  trend: string | null;
 }
 
-const METRICS: MetricDef[] = [
-  { icon: Shield, value: 8412, suffix: "", label: "Threats Detected Today", trend: "+12%", spark: [4, 6, 5, 7, 6, 8, 7, 9, 8, 10] },
-  { icon: LinkIcon, value: 142006, suffix: "", label: "URLs Analyzed", trend: "+8%", spark: [6, 6, 7, 6, 8, 7, 8, 9, 8, 9] },
-  { icon: FileText, value: 9884, suffix: "", label: "Files Scanned", trend: "+23%", spark: [3, 4, 4, 6, 5, 8, 7, 9, 10, 11] },
-  { icon: Globe, value: 190, suffix: "+", label: "Countries Protected", trend: "+0%", spark: [8, 8, 8, 8, 8, 8, 8, 8, 8, 8] },
-];
+function pctChange(today: number, yesterday: number): string | null {
+  if (yesterday === 0) return today > 0 ? "+100%" : null;
+  const pct = Math.round(((today - yesterday) / yesterday) * 100);
+  return `${pct >= 0 ? "+" : ""}${pct}%`;
+}
 
-function Sparkline({ points }: { points: number[] }) {
-  const pathRef = useRef<SVGPathElement>(null);
-  const w = 100;
-  const h = 28;
-  const max = Math.max(...points);
-  const min = Math.min(...points);
-  const step = w / (points.length - 1);
-  const d = points.map((p, i) => `${i === 0 ? "M" : "L"}${i * step},${h - ((p - min) / (max - min || 1)) * h}`).join(" ");
-
-  useEffect(() => {
-    const path = pathRef.current;
-    if (!path) return;
-    const length = path.getTotalLength();
-    gsap.set(path, { strokeDasharray: length, strokeDashoffset: length });
-    gsap.to(path, {
-      strokeDashoffset: 0,
-      duration: 1.2,
-      ease: "power2.out",
-      scrollTrigger: { trigger: path, start: "top 90%", once: true },
-    });
-  }, [d]);
-
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="h-7 w-full" preserveAspectRatio="none">
-      <path ref={pathRef} d={d} fill="none" stroke="#ff7a1a" strokeWidth="1.5" />
-    </svg>
-  );
+function buildMetrics(stats: DailyStats): MetricDef[] {
+  return [
+    {
+      icon: Shield,
+      value: stats.threats_detected_today,
+      suffix: "",
+      label: "Threats Detected Today",
+      trend: pctChange(stats.threats_detected_today, stats.threats_detected_yesterday),
+    },
+    {
+      icon: LinkIcon,
+      value: stats.urls_analyzed_today,
+      suffix: "",
+      label: "URLs Analyzed",
+      trend: pctChange(stats.urls_analyzed_today, stats.urls_analyzed_yesterday),
+    },
+    {
+      icon: FileText,
+      value: stats.files_scanned_today,
+      suffix: "",
+      label: "Files Scanned",
+      trend: pctChange(stats.files_scanned_today, stats.files_scanned_yesterday),
+    },
+    {
+      icon: Globe,
+      value: stats.countries,
+      suffix: "",
+      label: "Countries Protected",
+      trend: null,
+    },
+  ];
 }
 
 function MetricCard({ metric, index }: { metric: MetricDef; index: number }) {
@@ -74,7 +88,7 @@ function MetricCard({ metric, index }: { metric: MetricDef; index: number }) {
           { v: 0 },
           {
             v: metric.value,
-            duration: 1.6,
+            duration: 1.2,
             delay: index * 0.1,
             ease: "power2.out",
             onUpdate: function () {
@@ -86,30 +100,53 @@ function MetricCard({ metric, index }: { metric: MetricDef; index: number }) {
     });
   }, [index, metric.value]);
 
+  const isDown = metric.trend?.startsWith("-");
+
   return (
     <div ref={cardRef} className="rounded-xl border border-border-subtle bg-card-bg p-5 opacity-0" style={{ transform: "translateY(16px)" }}>
       <div className="flex items-center justify-between">
         <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-flame-primary/25 bg-flame-primary/10 text-flame-bright">
           <metric.icon className="h-4.5 w-4.5" />
         </span>
-        <span className="flex items-center gap-0.5 text-xs font-semibold text-success">
-          <ArrowUp className="h-3.5 w-3.5" /> {metric.trend}
-        </span>
+        {metric.trend && (
+          <span className={`flex items-center gap-0.5 text-xs font-semibold ${isDown ? "text-danger" : "text-success"}`}>
+            {isDown ? <ArrowDown className="h-3.5 w-3.5" /> : <ArrowUp className="h-3.5 w-3.5" />} {metric.trend}
+          </span>
+        )}
       </div>
       <p className="mt-4 font-heading text-2xl font-bold text-white sm:text-3xl">
         {display.toLocaleString("en-US")}
         {metric.suffix}
       </p>
       <p className="mt-1 text-xs uppercase tracking-wider text-muted">{metric.label}</p>
-      <div className="mt-3">
-        <Sparkline points={metric.spark} />
-      </div>
+      {/* <p className="mt-3 text-[10px] uppercase tracking-wide text-muted/60">
+        {metric.trend ? "vs. yesterday" : "cumulative"}
+      </p> */}
     </div>
   );
 }
 
+const EMPTY_STATS: DailyStats = {
+  threats_detected_today: 0,
+  threats_detected_yesterday: 0,
+  urls_analyzed_today: 0,
+  urls_analyzed_yesterday: 0,
+  files_scanned_today: 0,
+  files_scanned_yesterday: 0,
+  countries: 0,
+};
+
 export function ThreatMapSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const [stats, setStats] = useState<DailyStats>(EMPTY_STATS);
+
+  useEffect(() => {
+    publicJson<DailyStats>("/api/stats/daily")
+      .then(setStats)
+      .catch(() => {
+        // Non-fatal — cards just show 0 until this succeeds.
+      });
+  }, []);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -147,6 +184,8 @@ export function ThreatMapSection() {
     return () => ctx.revert();
   }, []);
 
+  const metrics = buildMetrics(stats);
+
   return (
     <section id="map" ref={sectionRef} className="border-t border-border-subtle bg-secondary-dark py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -156,7 +195,7 @@ export function ThreatMapSection() {
               Live Telemetry
             </p>
             <h2 data-header-bit className="mt-3 font-heading text-3xl font-bold text-white sm:text-4xl">
-              Global Threat Map
+              <ScrollFloat text="Global Threat Map" splitBy="words" />
             </h2>
             <p data-header-bit className="mt-2 text-sm text-muted">
               Watch threats move across the world in real time.
@@ -171,7 +210,7 @@ export function ThreatMapSection() {
               Updated 2s ago
             </span>
             <span className="rounded-full border border-border-subtle px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
-              190+ Countries
+              {stats.countries}+ Countries
             </span>
             <Link
               href="/threat-intelligence"
@@ -187,7 +226,7 @@ export function ThreatMapSection() {
         </div>
 
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {METRICS.map((m, i) => (
+          {metrics.map((m, i) => (
             <MetricCard key={m.label} metric={m} index={i} />
           ))}
         </div>

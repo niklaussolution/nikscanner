@@ -25,7 +25,7 @@ export default function ContactPage() {
     <>
       <Navbar />
       <main className="flex-1 bg-bg-black">
-        <PageHeader eyebrow="Contact" title="Get in touch" description="Sales, support, or security disclosures." />
+        <PageHeader title="Get in touch" description="Sales, support, or security disclosures." />
         <section className="mx-auto max-w-lg px-4 py-16 sm:px-6 lg:px-8">
           {sent ? (
             <div className="flex flex-col items-center rounded-xl border border-success/30 bg-success/5 p-10 text-center">

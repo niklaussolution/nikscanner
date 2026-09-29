@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
@@ -16,7 +16,16 @@ import { safeNextPath } from "@/lib/utils";
 
 const googleProvider = new GoogleAuthProvider();
 
+// useSearchParams() needs a Suspense boundary or the static prerender of this page fails the build.
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const destination = safeNextPath(searchParams.get("next"));

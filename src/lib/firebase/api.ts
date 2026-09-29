@@ -8,6 +8,17 @@ function nikscannerUrl(path: string): string {
   return `${NIKSCANNER_API_BASE_URL.replace(/\/+$/, "")}${path}`;
 }
 
+/** Turns a backend error response into a message fit to show a user. */
+function backendErrorMessage(res: Response, data: { error?: string; retry_after?: number }): string {
+  if (res.status === 429) {
+    const minutes = data.retry_after ? Math.max(1, Math.ceil(data.retry_after / 60)) : null;
+    return minutes
+      ? `Too many requests. Please wait about ${minutes} minute${minutes === 1 ? "" : "s"} and try again.`
+      : "Too many requests. Please wait a few minutes and try again.";
+  }
+  return data.error || `Request failed (${res.status})`;
+}
+
 /** Fetches a NIKSCANNER backend path with the signed-in user's Firebase ID token attached —
  *  throws if nobody's signed in, since every route behind this expects a user. */
 export async function authedFetch(path: string, init: RequestInit = {}): Promise<Response> {
@@ -23,7 +34,7 @@ export async function authedFetch(path: string, init: RequestInit = {}): Promise
 export async function authedJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await authedFetch(path, init);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  if (!res.ok) throw new Error(backendErrorMessage(res, data));
   return data as T;
 }
 
@@ -31,6 +42,6 @@ export async function authedJson<T>(path: string, init: RequestInit = {}): Promi
 export async function publicJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(nikscannerUrl(path), init);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  if (!res.ok) throw new Error(backendErrorMessage(res, data));
   return data as T;
 }

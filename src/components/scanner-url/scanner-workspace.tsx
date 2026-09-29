@@ -14,6 +14,7 @@ import { STAGES, type AnalysisCardData, type ScanState } from "@/components/scan
 import { useRouter } from "next/navigation";
 import { THREAT_LEVEL_LABEL, type ScanResultPayload } from "@/types/scan";
 import { logScanIfSignedIn } from "@/lib/firebase/log-scan";
+import { categorizeScan } from "@/lib/scan/categorize";
 import { autoReportIfSignedIn } from "@/lib/firebase/auto-report";
 import { consumeCredit } from "@/lib/firebase/credits";
 import { Toast } from "@/components/ui/toast";
@@ -270,7 +271,7 @@ export function ScannerWorkspace() {
       setCards(computeResultCards(result, trimmed));
       setLastResult(result);
       setScanState("complete");
-      logScanIfSignedIn({ target: trimmed, targetType: "url", threatLevel: result.threatLevel, score: result.score });
+      logScanIfSignedIn({ target: trimmed, targetType: "url", threatLevel: result.threatLevel, score: result.score, category: categorizeScan(result) });
       if (result.shouldAutoReport && result.autoReportCategory) {
         autoReportIfSignedIn(result.finalUrl ?? trimmed, result.autoReportCategory);
       }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import { AuthProvider } from "@/lib/firebase/auth-context";
 import { RouteAuthGuard } from "@/components/auth/route-auth-guard";
+import { SmoothScroll } from "@/components/layout/smooth-scroll";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-bg-black text-soft-white font-sans">
+        <SmoothScroll />
         <AuthProvider>
           <RouteAuthGuard>{children}</RouteAuthGuard>
         </AuthProvider>

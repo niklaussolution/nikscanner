@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -23,7 +23,16 @@ import { COUNTRIES } from "@/lib/data/countries";
 
 const googleProvider = new GoogleAuthProvider();
 
+// useSearchParams() needs a Suspense boundary or the static prerender of this page fails the build.
 export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
+  );
+}
+
+function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const destination = safeNextPath(searchParams.get("next"));

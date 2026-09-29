@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ScrollFloat from "@/components/ui/ScrollFloat";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -101,9 +102,9 @@ function ScanCard({ scanner, index }: { scanner: ScannerDef; index: number }) {
             </span>
             <h3 className="font-heading text-base font-bold text-white">{scanner.title}</h3>
           </div>
-          <span className="flex shrink-0 items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-success">
+          {/* <span className="flex shrink-0 items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-success">
             <span className="h-1.5 w-1.5 rounded-full bg-success" /> Ready
-          </span>
+          </span> */}
         </div>
 
         <p className="mt-3 text-sm text-muted">{scanner.desc}</p>
@@ -335,7 +336,9 @@ export function WhatWeScan() {
 
         <div className="mx-auto max-w-2xl text-center">
           {/* <p className="text-xs font-semibold uppercase tracking-widest text-flame-bright">Coverage</p> */}
-          <h2 className="mt-3 font-heading text-3xl font-bold text-white sm:text-4xl">What NIKSCANNER Scans</h2>
+          <h2 className="mt-3 font-heading text-3xl font-bold text-white sm:text-4xl">
+            <ScrollFloat text="What NIKSCANNER Scans" splitBy="words" />
+          </h2>
           <p className="mt-3 text-muted">One platform, every attack surface — from a single link to a full device.</p>
         </div>
 

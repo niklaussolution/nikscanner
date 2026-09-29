@@ -11,7 +11,6 @@ export default function DownloadPage() {
       <Navbar />
       <main className="flex-1 bg-bg-black">
         <PageHeader
-          eyebrow="Mobile App"
           title="NIKSCANNER in your pocket"
           description="Scan links, QR codes and files, and monitor device security wherever you are."
         />

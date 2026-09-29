@@ -17,6 +17,7 @@ import { validateFileMeta, sniffMatchesExtension, hashFileSHA256, formatBytes, g
 import { fileTypeLabel } from "@/components/scanner-file/file-analysis";
 import { THREAT_LEVEL_LABEL, type ScanResultPayload } from "@/types/scan";
 import { logScanIfSignedIn } from "@/lib/firebase/log-scan";
+import { categorizeScan } from "@/lib/scan/categorize";
 import { runLocalFileScan } from "@/lib/file-scan/local-scan";
 import { runMlScan, supportsMlScan, type MlScanResult } from "@/lib/firebase/ml-scan";
 import { consumeCredit } from "@/lib/firebase/credits";
@@ -338,7 +339,7 @@ export function FileScannerWorkspace() {
       setCards(computeResultCards(result, file, sha256, mlResult));
       setDemoResult(result.demo);
       setFileScanState("complete");
-      logScanIfSignedIn({ target: file.name, targetType: "file", threatLevel: result.threatLevel, score: result.score });
+      logScanIfSignedIn({ target: file.name, targetType: "file", threatLevel: result.threatLevel, score: result.score, category: categorizeScan(result) });
       refreshBalance();
 
       const isSafe = result.threatLevel === "SAFE" || result.threatLevel === "LOW_RISK";
@@ -374,8 +375,8 @@ export function FileScannerWorkspace() {
       ? [
           {
             icon: FileCog,
-            label: "File scans left",
-            value: `${Math.max(balance.file_scans_allowed - balance.file_scans_used, 0)} / ${balance.file_scans_allowed}`,
+            label: "File scans used",
+            value: `${Math.min(balance.file_scans_used, balance.file_scans_allowed)} / ${balance.file_scans_allowed}`,
             tone: balance.file_scans_used >= balance.file_scans_allowed ? ("danger" as const) : ("neutral" as const),
           },
         ]

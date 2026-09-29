@@ -19,6 +19,7 @@ import { looksConfusable, openSafely } from "@/components/scanner-qr/open-safely
 import { QR_STAGES, type QrScanState } from "@/components/scanner-qr/types";
 import { THREAT_LEVEL_LABEL, type ScanResultPayload } from "@/types/scan";
 import { logScanIfSignedIn } from "@/lib/firebase/log-scan";
+import { categorizeScan } from "@/lib/scan/categorize";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { fetchRecentScans } from "@/lib/firebase/scan-history";
 import { formatRelativeTime } from "@/lib/format-time";
@@ -96,11 +97,14 @@ export function QrScannerWorkspace() {
         { opacity: 0, y: 60, scale: 0.98 },
         { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: "power3.out", scrollTrigger: { trigger: root, start: "top 82%", once: true } },
       );
-      gsap.fromTo(
-        "[data-analysis-card]",
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.5, stagger: 0.08, delay: 0.3, ease: "power2.out", scrollTrigger: { trigger: root, start: "top 82%", once: true } },
-      );
+      const analysisCards = root.querySelectorAll("[data-analysis-card]");
+      if (analysisCards.length > 0) {
+        gsap.fromTo(
+          analysisCards,
+          { opacity: 0, y: 20 },
+          { opacity: 1, y: 0, duration: 0.5, stagger: 0.08, delay: 0.3, ease: "power2.out", scrollTrigger: { trigger: root, start: "top 82%", once: true } },
+        );
+      }
       gsap.fromTo(
         "[data-radar]",
         { opacity: 0, scale: 0.85 },
@@ -173,7 +177,7 @@ export function QrScannerWorkspace() {
       setTlsInfo(tls);
       setActiveStageIndex(4);
       setQrState(tls ? "complete" : "partial");
-      logScanIfSignedIn({ target: url, targetType: "qr", threatLevel: scanResult.threatLevel, score: scanResult.score });
+      logScanIfSignedIn({ target: url, targetType: "qr", threatLevel: scanResult.threatLevel, score: scanResult.score, category: categorizeScan(scanResult) });
 
       const isSafe = scanResult.threatLevel === "SAFE" || scanResult.threatLevel === "LOW_RISK";
       const verdictTone: RecentScanEntry["verdictTone"] = isSafe ? "safe" : "danger";
@@ -450,7 +454,7 @@ export function QrScannerWorkspace() {
               {confirmOpen && (
                 <div className="mt-3 rounded-lg border border-[var(--danger)]/40 bg-[var(--danger)]/10 p-3.5 text-xs text-[var(--text-secondary)]">
                   <p className="font-semibold text-[var(--danger)]">This destination hasn&apos;t been confirmed safe.</p>
-                  <p className="mt-1">{decodedValue}</p>
+                  <p className="mt-1 break-all font-mono">{decodedValue}</p>
                   <div className="mt-2 flex gap-3">
                     <button type="button" onClick={handleOpenSafely} className="text-xs font-bold uppercase tracking-wide text-[var(--danger)] underline">
                       Yes, open anyway

@@ -147,7 +147,7 @@ export function PrimaryPhone({ className }: { className?: string }) {
           {/* scan button */}
           <button
             type="button"
-            className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-flame-primary to-flame-bright py-3 text-xs font-bold uppercase tracking-wide text-white shadow-[0_8px_24px_-8px_rgba(255,90,0,0.6)]"
+            className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-flame-primary to-flame-bright py-2 text-xs font-bold uppercase tracking-wide text-white shadow-[0_8px_24px_-8px_rgba(255,90,0,0.6)]"
           >
             <ScanLine className="h-4 w-4" /> Scan Device
           </button>

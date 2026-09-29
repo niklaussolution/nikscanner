@@ -45,6 +45,7 @@ export function Navbar({ showLogo = true }: { showLogo?: boolean }) {
   const [scrolled, setScrolled] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileSubOpen, setMobileSubOpen] = useState<string | null>(null);
   const visibleLinks = NAV_LINKS.filter((link) => !AUTH_ONLY_LABELS.has(link.label) || (!loading && user));
 
   useEffect(() => {
@@ -152,20 +153,67 @@ export function Navbar({ showLogo = true }: { showLogo?: boolean }) {
             className="overflow-hidden border-t border-border-subtle bg-black/95 xl:hidden"
           >
             <div className="space-y-1 px-4 py-4">
-              {visibleLinks.map((link) => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  aria-current={isLinkActive(pathname, link) ? "page" : undefined}
-                  className={cn(
-                    "block rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-white/5",
-                    isLinkActive(pathname, link) ? "text-flame-primary" : "text-white",
-                  )}
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {visibleLinks.map((link) =>
+                link.menu ? (
+                  <div key={link.label}>
+                    <button
+                      type="button"
+                      aria-expanded={mobileSubOpen === link.label}
+                      onClick={() => setMobileSubOpen((v) => (v === link.label ? null : link.label))}
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-white/5",
+                        isLinkActive(pathname, link) ? "text-flame-primary" : "text-white",
+                      )}
+                    >
+                      {link.label}
+                      <ChevronDown className={cn("h-4 w-4 transition-transform", mobileSubOpen === link.label && "rotate-180")} />
+                    </button>
+                    <AnimatePresence>
+                      {mobileSubOpen === link.label && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.15 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="ml-2 space-y-1 border-l border-border-subtle py-1 pl-3">
+                            {link.menu.map((item) => (
+                              <Link
+                                key={item.href}
+                                href={item.href}
+                                className={cn(
+                                  "block rounded-lg px-3 py-2 text-sm hover:bg-white/5",
+                                  pathname === item.href || pathname.startsWith(`${item.href}/`) ? "text-flame-primary" : "text-muted hover:text-white",
+                                )}
+                                onClick={() => {
+                                  setMobileOpen(false);
+                                  setMobileSubOpen(null);
+                                }}
+                              >
+                                {item.label}
+                              </Link>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ) : (
+                  <Link
+                    key={link.label}
+                    href={link.href}
+                    aria-current={isLinkActive(pathname, link) ? "page" : undefined}
+                    className={cn(
+                      "block rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-white/5",
+                      isLinkActive(pathname, link) ? "text-flame-primary" : "text-white",
+                    )}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ),
+              )}
               <div className="mt-3 flex flex-col gap-2 border-t border-border-subtle pt-3">
                 {!loading && user ? (
                   <>

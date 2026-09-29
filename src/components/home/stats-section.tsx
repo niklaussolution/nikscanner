@@ -4,7 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { useInView, animate } from "framer-motion";
 import { Link as LinkIcon, ShieldCheck, Globe, BarChart2, ArrowUpRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { publicJson } from "@/lib/firebase/api";
 import { LiveActivityTicker } from "@/components/home/live-activity-ticker";
+
+interface BackendStats {
+  url_scans_total: number;
+  confirmed: number;
+  countries: number;
+}
 
 interface StatDef {
   icon: LucideIcon;
@@ -12,16 +19,9 @@ interface StatDef {
   decimals?: number;
   suffix: string;
   label: string;
-  trend: string;
-  spark: number[];
+  trend?: string;
+  spark?: number[];
 }
-
-const STATS: StatDef[] = [
-  { icon: LinkIcon, value: 2400000, suffix: "+", label: "URLs Scanned", trend: "+12%", spark: [4, 6, 5, 8, 7, 9, 8, 11, 10, 13] },
-  { icon: ShieldCheck, value: 420000, suffix: "+", label: "Threats Detected", trend: "+18%", spark: [3, 4, 4, 6, 5, 7, 9, 8, 10, 12] },
-  { icon: Globe, value: 3, suffix: "+", label: "Countries", trend: "+6%", spark: [7, 7, 8, 8, 9, 8, 9, 10, 10, 11] },
-  { icon: BarChart2, value: 100, decimals: 0, suffix: "%", label: "Platform Availability", trend: "+0.01%", spark: [9, 9, 10, 9, 10, 10, 9, 10, 10, 10] },
-];
 
 function formatIndian(value: number, decimals: number) {
   return value.toLocaleString("en-IN", { maximumFractionDigits: decimals, minimumFractionDigits: decimals });
@@ -65,23 +65,52 @@ function StatCard({ stat }: { stat: StatDef }) {
         <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-flame-primary/25 bg-flame-primary/10 text-flame-bright">
           <stat.icon className="h-4.5 w-4.5" />
         </span>
-        <span className="flex items-center gap-0.5 text-xs font-semibold text-success">
-          <ArrowUpRight className="h-3.5 w-3.5" /> {stat.trend}
-        </span>
+        {stat.trend && (
+          <span className="flex items-center gap-0.5 text-xs font-semibold text-success">
+            <ArrowUpRight className="h-3.5 w-3.5" /> {stat.trend}
+          </span>
+        )}
       </div>
       <p className="mt-4 font-heading text-2xl font-bold text-flame-gradient sm:text-3xl">
         {formatIndian(display, stat.decimals ?? 0)}
         {stat.suffix}
       </p>
       <p className="mt-1 text-xs uppercase tracking-wider text-muted">{stat.label}</p>
-      <div className="mt-3">
-        <Sparkline points={stat.spark} />
-      </div>
+      {stat.spark && (
+        <div className="mt-3">
+          <Sparkline points={stat.spark} />
+        </div>
+      )}
     </div>
   );
 }
 
 export function StatsSection() {
+  const [stats, setStats] = useState<BackendStats | null>(null);
+
+  useEffect(() => {
+    publicJson<BackendStats>("/api/stats")
+      .then(setStats)
+      .catch(() => {
+        // Non-fatal — the cards just stay at 0 until this succeeds.
+      });
+  }, []);
+
+  const defs: StatDef[] = [
+    { icon: LinkIcon, value: stats?.url_scans_total ?? 0, suffix: "", label: "URLs Scanned" },
+    { icon: ShieldCheck, value: stats?.confirmed ?? 0, suffix: "", label: "Threats Detected" },
+    { icon: Globe, value: stats?.countries ?? 0, suffix: "", label: "Countries" },
+    {
+      icon: BarChart2,
+      value: 100,
+      decimals: 0,
+      suffix: "%",
+      label: "Platform Availability",
+      trend: "+0.01%",
+      spark: [9, 9, 10, 9, 10, 10, 9, 10, 10, 10],
+    },
+  ];
+
   return (
     <section className="border-t border-border-subtle bg-bg-black py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -96,7 +125,7 @@ export function StatsSection() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {STATS.map((s) => (
+          {defs.map((s) => (
             <StatCard key={s.label} stat={s} />
           ))}
         </div>

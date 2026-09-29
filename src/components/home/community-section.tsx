@@ -8,6 +8,8 @@ import { ShieldAlert, Trophy, Users, FileText, ShieldCheck } from "lucide-react"
 import type { LucideIcon } from "lucide-react";
 import { SignalNetwork } from "@/components/community/signal-network";
 import { CommunityReportsPanel } from "@/components/community/community-reports-panel";
+import ScrollFloat from "@/components/ui/ScrollFloat";
+import { useAuth } from "@/lib/firebase/auth-context";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -127,6 +129,7 @@ export function CommunitySection() {
   const quickX = useRef<gsap.QuickToFunc | null>(null);
   const quickY = useRef<gsap.QuickToFunc | null>(null);
   const [pulse, setPulse] = useState<PulseData | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     let cancelled = false;
@@ -220,7 +223,7 @@ export function CommunitySection() {
 
             <h2 className="mt-4 overflow-hidden font-heading text-3xl font-bold leading-tight text-white sm:text-4xl">
               <span data-heading-mask className="inline-block">
-                Security gets stronger together.
+                <ScrollFloat text="Security gets stronger together." splitBy="words" />
               </span>
             </h2>
 
@@ -230,9 +233,11 @@ export function CommunitySection() {
             </p>
 
             <div data-left-bit className="mt-8 flex flex-wrap gap-3">
-              <MagneticButton href="/signup" variant="primary">
-                <ShieldAlert className="h-4 w-4" /> Join the Community
-              </MagneticButton>
+              {!user && (
+                <MagneticButton href="/signup" variant="primary">
+                  <ShieldAlert className="h-4 w-4" /> Join the Community
+                </MagneticButton>
+              )}
               <MagneticButton href="/leaderboard" variant="outline">
                 <Trophy className="h-4 w-4" /> View Leaderboard
               </MagneticButton>
