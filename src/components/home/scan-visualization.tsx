@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
+import markImg from "@/app/nikscanner-mark.png";
 import { motion } from "framer-motion";
 import {
-  Shield,
   Link as LinkIcon,
   FileText,
   FileType,
@@ -83,7 +84,7 @@ export function ScanVisualization() {
 
       {/* central shield */}
       <div className="absolute left-1/2 top-1/2 flex h-24 w-24 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-flame-primary/40 bg-flame-primary/10 sm:h-28 sm:w-28">
-        <Shield className="h-11 w-11 text-flame-bright sm:h-14 sm:w-14" strokeWidth={1.5} />
+        <Image src={markImg} alt="NIKSCANNER" priority className="h-12 w-auto sm:h-14" />
       </div>
 
       {ORBIT_NODES.map((n) => (

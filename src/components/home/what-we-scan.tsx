@@ -9,12 +9,13 @@ import {
   Globe,
   Network,
   QrCode,
-  Shield,
   CheckCircle2,
   ArrowRight,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
+import markImg from "@/app/nikscanner-mark.png";
 import ScrollFloat from "@/components/ui/ScrollFloat";
 
 if (typeof window !== "undefined") {
@@ -362,7 +363,7 @@ export function WhatWeScan() {
 
               <div className="relative flex flex-col items-center pt-12">
                 <div className="flex h-24 w-24 items-center justify-center rounded-full border border-flame-primary/40 bg-flame-primary/10">
-                  <Shield className="h-11 w-11 text-flame-bright" strokeWidth={1.5} />
+                  <Image src={markImg} alt="NIKSCANNER" className="h-12 w-auto" />
                 </div>
                 <p className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-success">
                   NIKSCANNER

@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import Image from "next/image";
+import logoImg from "@/app/nikscanner-logo.png";
 import { Wifi, Battery, Globe, Link as LinkIcon, Smartphone, ChevronRight, ScanLine, Home, Bell, User, ShieldCheck } from "lucide-react";
 
 if (typeof window !== "undefined") {
@@ -86,9 +88,7 @@ export function PrimaryPhone({ className }: { className?: string }) {
 
           {/* wordmark */}
           <div className="mt-4 flex items-center justify-between">
-            <p className="font-heading text-sm font-bold tracking-tight text-white">
-              NIK<span className="text-flame-bright">SCANNER</span>
-            </p>
+            <Image src={logoImg} alt="NIKSCANNER" className="h-6 w-auto" />
             <span className="flex items-center gap-1 text-[10px] font-semibold text-success">
               <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse-glow" /> Online
             </span>

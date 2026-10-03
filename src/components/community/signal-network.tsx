@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { MotionPathPlugin } from "gsap/MotionPathPlugin";
-import { Shield } from "lucide-react";
+import Image from "next/image";
+import markImg from "@/app/nikscanner-mark.png";
 import { publicJson } from "@/lib/firebase/api";
 import type { LeaderboardResult } from "@/lib/firebase/nikscanner-types";
 
@@ -182,7 +183,7 @@ export function SignalNetwork() {
         {/* central hub */}
         <div data-net-hub className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center pt-10">
           <div className="flex h-[84px] w-[84px] items-center justify-center rounded-full border border-flame-primary/50 bg-card-bg shadow-[0_0_40px_-4px_rgba(255,90,0,0.55)]">
-            <Shield className="h-8 w-8 text-flame-bright" fill="rgba(255,90,0,0.18)" />
+            <Image src={markImg} alt="NIKSCANNER" className="h-10 w-auto" />
           </div>
           <p className="mt-2.5 text-sm font-bold text-white">NIKSCANNER</p>
           <p className="text-[9px] font-semibold uppercase tracking-widest text-muted">Intelligence Engine</p>

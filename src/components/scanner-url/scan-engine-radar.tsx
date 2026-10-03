@@ -1,6 +1,8 @@
 "use client";
 
-import { Settings, Shield, Link as LinkIcon, Database, Package, Lock } from "lucide-react";
+import { Settings, Shield, Database, Package, Lock } from "lucide-react";
+import Image from "next/image";
+import markImg from "@/app/nikscanner-mark.png";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ScanState } from "@/components/scanner-url/types";
@@ -21,13 +23,13 @@ const DEFAULT_STATUS_ROWS: RadarStatusRow[] = [
 export function ScanEngineRadar({
   state,
   title = "Scan Engine",
-  centerIcon: CenterIcon = LinkIcon,
   scanningLabel,
   statusRows = DEFAULT_STATUS_ROWS,
   footerText = "Your submission is encrypted in transit.",
 }: {
   state: ScanState;
   title?: string;
+  /** No longer rendered — the centre always shows the NIKSCANNER mark. Kept so callers compile. */
   centerIcon?: LucideIcon;
   scanningLabel?: string;
   statusRows?: RadarStatusRow[];
@@ -108,10 +110,9 @@ export function ScanEngineRadar({
           </g>
         </svg>
 
-        {/* central shield + icon */}
+        {/* central NIKSCANNER mark */}
         <div className="absolute left-1/2 top-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--orange)]/50 bg-[var(--surface)] shadow-[0_0_28px_-4px_rgba(255,90,0,0.5)]">
-          <Shield className="absolute h-9 w-9 text-[var(--orange)]/30" strokeWidth={1.25} />
-          <CenterIcon className="relative h-5 w-5 text-[var(--orange-light)]" />
+          <Image src={markImg} alt="NIKSCANNER" className="h-7 w-auto" />
         </div>
       </div>
 
