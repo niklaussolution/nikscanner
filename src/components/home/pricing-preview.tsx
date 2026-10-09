@@ -210,7 +210,7 @@ export function PricingPreview() {
           <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-nowrap sm:items-center sm:gap-6">
             {TRUST_ITEMS.map((item, i) => (
               <div key={item.label} className="flex items-center gap-4">
-                <div data-trust-item className="flex items-center gap-2 whitespace-nowrap">
+                <div data-trust-item className="flex items-center gap-2 sm:whitespace-nowrap">
                   <item.icon className="h-4 w-4 shrink-0 text-flame-primary" />
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted">{item.label}</span>
                 </div>

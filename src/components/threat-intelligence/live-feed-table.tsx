@@ -46,10 +46,10 @@ export function LiveFeedTable() {
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-border-subtle text-xs uppercase tracking-wider text-muted">
-            <th className="px-5 py-3 font-medium">Time</th>
-            <th className="px-5 py-3 font-medium">Type</th>
-            <th className="px-5 py-3 font-medium">Indicator</th>
-            <th className="px-5 py-3 font-medium">Risk</th>
+            <th className="hidden px-5 py-3 font-medium sm:table-cell">Time</th>
+            <th className="px-3 py-3 font-medium sm:px-5">Type</th>
+            <th className="px-3 py-3 font-medium sm:px-5">Indicator</th>
+            <th className="px-3 py-3 font-medium sm:px-5">Risk</th>
           </tr>
         </thead>
         <tbody>
@@ -68,14 +68,17 @@ export function LiveFeedTable() {
           ) : (
             scans.map((item, i) => (
               <tr key={i} className="border-b border-border-subtle font-mono last:border-0 hover:bg-white/[0.02]">
-                <td className="whitespace-nowrap px-5 py-3 text-muted">{formatRelativeTime(item.created_at)}</td>
-                <td className="px-5 py-3">
+                <td className="hidden whitespace-nowrap px-5 py-3 text-muted sm:table-cell">{formatRelativeTime(item.created_at)}</td>
+                <td className="px-3 py-3 sm:px-5">
                   <Badge variant={LEVEL_VARIANT[item.threat_level]}>{THREAT_LEVEL_LABEL[item.threat_level]}</Badge>
                 </td>
-                <td className="max-w-[220px] truncate px-5 py-3 text-soft-white">{hostnameOf(item.target)}</td>
+                <td className="max-w-[105px] px-3 py-3 text-soft-white min-[375px]:max-w-[130px] sm:max-w-[220px] sm:px-5">
+                  <span className="block truncate">{hostnameOf(item.target)}</span>
+                  <span className="block text-[11px] text-muted sm:hidden">{formatRelativeTime(item.created_at)}</span>
+                </td>
                 <td
                   className={
-                    "px-5 py-3 font-semibold " +
+                    "px-3 py-3 font-semibold sm:px-5 " +
                     (item.score >= 80 ? "text-danger" : item.score >= 50 ? "text-warning" : "text-success")
                   }
                 >

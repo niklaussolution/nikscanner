@@ -7,6 +7,7 @@
  * connection just throwing on anything imperfect.
  */
 import tls from "node:tls";
+import { guardedLookup } from "@/lib/security/ssrf";
 
 export interface TlsInfo {
   valid: boolean;
@@ -24,7 +25,7 @@ export function inspectTls(hostname: string, timeoutMs = 6000): Promise<TlsInfo 
     };
 
     const socket = tls.connect(
-      { host: hostname, port: 443, servername: hostname, timeout: timeoutMs, rejectUnauthorized: false },
+      { host: hostname, port: 443, servername: hostname, timeout: timeoutMs, rejectUnauthorized: false, lookup: guardedLookup },
       () => {
         const cert = socket.getPeerCertificate();
         const protocol = socket.getProtocol();

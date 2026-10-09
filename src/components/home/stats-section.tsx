@@ -60,7 +60,7 @@ function StatCard({ stat }: { stat: StatDef }) {
   }, [inView, stat.value]);
 
   return (
-    <div ref={ref} className="rounded-xl border border-border-subtle bg-card-bg p-5">
+    <div ref={ref} className="min-w-0 rounded-xl border border-border-subtle bg-card-bg p-4 sm:p-5">
       <div className="flex items-center justify-between">
         <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-flame-primary/25 bg-flame-primary/10 text-flame-bright">
           <stat.icon className="h-4.5 w-4.5" />
@@ -75,7 +75,7 @@ function StatCard({ stat }: { stat: StatDef }) {
         {formatIndian(display, stat.decimals ?? 0)}
         {stat.suffix}
       </p>
-      <p className="mt-1 text-xs uppercase tracking-wider text-muted">{stat.label}</p>
+      <p className="mt-1 text-[11px] uppercase tracking-wider text-muted sm:text-xs">{stat.label}</p>
       {stat.spark && (
         <div className="mt-3">
           <Sparkline points={stat.spark} />
@@ -124,7 +124,7 @@ export function StatsSection() {
           <span className="h-px flex-1 bg-border-subtle" />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {defs.map((s) => (
             <StatCard key={s.label} stat={s} />
           ))}

@@ -87,23 +87,29 @@ export default function ScanHistoryPage() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-border-subtle text-xs uppercase tracking-wider text-muted">
-                    <th className="px-5 py-3 font-medium">Target</th>
-                    <th className="px-5 py-3 font-medium">Type</th>
-                    <th className="px-5 py-3 font-medium">Risk</th>
-                    <th className="px-5 py-3 font-medium">Score</th>
-                    <th className="px-5 py-3 font-medium">Date</th>
+                    <th className="px-3 py-3 font-medium sm:px-5">Target</th>
+                    <th className="hidden px-5 py-3 font-medium sm:table-cell">Type</th>
+                    <th className="px-3 py-3 font-medium sm:px-5">Risk</th>
+                    <th className="hidden px-5 py-3 font-medium sm:table-cell">Score</th>
+                    <th className="hidden px-5 py-3 font-medium sm:table-cell">Date</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((scan) => (
                     <tr key={scan.id} className="border-b border-border-subtle last:border-0">
-                      <td className="max-w-[220px] truncate px-5 py-3 font-mono text-soft-white">{scan.target}</td>
-                      <td className="px-5 py-3 text-muted">{FILTER_LABEL[scan.target_type]}</td>
-                      <td className="px-5 py-3">
+                      <td className="max-w-[180px] px-3 py-3 sm:max-w-[220px] sm:px-5">
+                        <span className="block truncate font-mono text-soft-white">{scan.target}</span>
+                        {/* Phones: type and date ride under the target instead of their own columns */}
+                        <span className="block truncate text-[11px] text-muted sm:hidden">
+                          {FILTER_LABEL[scan.target_type]} · {new Date(scan.created_at).toLocaleDateString()}
+                        </span>
+                      </td>
+                      <td className="hidden px-5 py-3 text-muted sm:table-cell">{FILTER_LABEL[scan.target_type]}</td>
+                      <td className="px-3 py-3 sm:px-5">
                         <RiskBadge level={scan.threat_level} />
                       </td>
-                      <td className="px-5 py-3 text-white">{scan.score}</td>
-                      <td className="px-5 py-3 text-muted">{new Date(scan.created_at).toLocaleString()}</td>
+                      <td className="hidden px-5 py-3 text-white sm:table-cell">{scan.score}</td>
+                      <td className="hidden whitespace-nowrap px-5 py-3 text-muted sm:table-cell">{new Date(scan.created_at).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>

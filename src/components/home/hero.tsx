@@ -77,7 +77,7 @@ export function Hero() {
                   fontWeight={850}
                   className="!inline-block !w-auto"
                 />
-                <ClickSpark sparkColor="#ffffff" className="font-heading text-9xl font-bold text-flame-gradient sm:text-7xl">
+                <ClickSpark sparkColor="#ffffff" className="font-heading text-[min(27vw,8rem)] font-bold leading-none text-flame-gradient sm:text-7xl">
                   CLICK.
                 </ClickSpark>
               </div>
@@ -105,7 +105,7 @@ export function Hero() {
               {/* The typed word changes width every few frames, which re-wrapped the sentence and made
                   everything below jump. An invisible copy of the longest word holds a fixed box, and
                   the typing text sits on top of it in the same grid cell. */}
-              <span className="inline-grid align-baseline text-4xl">
+              <span className="grid text-4xl sm:inline-grid sm:align-baseline">
                 <span aria-hidden className="invisible col-start-1 row-start-1 whitespace-pre tracking-tight">
                   {"  Domains"}
                   <span className="ml-1">_</span>

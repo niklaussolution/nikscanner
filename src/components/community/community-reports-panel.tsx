@@ -356,10 +356,10 @@ export function CommunityReportsPanel() {
         {/* moderation pipeline */}
         <div className="mt-6 rounded-xl border border-border-subtle bg-black/30 p-5">
           <p className="text-center text-[10px] font-semibold uppercase tracking-widest text-muted">How a Report Makes an Impact</p>
-          <div className="mt-4 flex items-center justify-center gap-2 sm:gap-4">
+          <div className="mt-4 flex items-start justify-center gap-1 sm:gap-4">
             {PIPELINE.map((stage, i) => (
-              <div key={stage.label} className="flex items-center gap-2 sm:gap-4">
-                <div data-pipeline-stage className="flex w-20 flex-col items-center text-center sm:w-24">
+              <div key={stage.label} className="flex items-start gap-1 sm:gap-4">
+                <div data-pipeline-stage className="flex w-16 flex-col items-center text-center sm:w-24">
                   <span className="flex h-12 w-12 items-center justify-center rounded-full border border-flame-primary/40 bg-flame-primary/10 text-flame-bright shadow-[0_0_24px_-6px_rgba(255,90,0,0.5)]">
                     <stage.icon className="h-5 w-5" />
                   </span>
@@ -367,7 +367,7 @@ export function CommunityReportsPanel() {
                   {stage.note && <p className="mt-0.5 text-[9px] leading-tight text-muted">{stage.note}</p>}
                 </div>
                 {i < PIPELINE.length - 1 && (
-                  <div data-pipeline-connector className="h-px w-6 shrink-0 bg-gradient-to-r from-flame-primary/60 to-flame-primary/10 sm:w-10" />
+                  <div data-pipeline-connector className="mt-6 h-px w-3 shrink-0 bg-gradient-to-r from-flame-primary/60 to-flame-primary/10 sm:w-10" />
                 )}
               </div>
             ))}

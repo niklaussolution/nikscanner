@@ -1,4 +1,5 @@
 import { assertPublicHostname } from "@/lib/security/ssrf";
+import { safeFetch } from "@/lib/security/safe-fetch";
 
 // Pure-heuristic (no LLM call) analysis of the final destination page's actual HTML content —
 // covers what the structural URL/redirect checks in heuristics.ts and pipeline.ts can't see:
@@ -63,25 +64,6 @@ function registrableLabel(hostname: string): string {
   return parts.length >= 2 ? parts.slice(-2).join(".") : hostname.toLowerCase();
 }
 
-async function readCappedBody(res: Response): Promise<string> {
-  if (!res.body) return "";
-  const reader = res.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      total += value.length;
-      if (total >= MAX_BODY_BYTES) {
-        reader.cancel().catch(() => {});
-        break;
-      }
-    }
-  }
-  return Buffer.concat(chunks.map((c) => Buffer.from(c))).toString("utf-8");
-}
 
 /** Fetches and inspects the destination page's actual content — brand-name/domain mismatch,
  *  credential (password) forms, executable download links. Degrades to "not fetched" (never
@@ -101,13 +83,12 @@ export async function analyzePageContent(url: string): Promise<ContentAnalysisRe
   const ssrf = await assertPublicHostname(hostname);
   if (!ssrf.allowed) return EMPTY_RESULT;
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(url, {
-      method: "GET",
-      redirect: "manual",
-      signal: controller.signal,
+    // safeFetch re-validates the address at connect time (DNS rebinding) and caps the body.
+    const res = await safeFetch(url, {
+      timeoutMs: FETCH_TIMEOUT_MS,
+      readBody: true,
+      maxBodyBytes: MAX_BODY_BYTES,
       headers: { "User-Agent": "NikScannerBot/1.0 (+https://niklaussolution.com)" },
     });
     if (!res.ok) return EMPTY_RESULT;
@@ -115,7 +96,7 @@ export async function analyzePageContent(url: string): Promise<ContentAnalysisRe
     const contentType = res.headers.get("content-type") ?? "";
     if (!contentType.toLowerCase().includes("text/html")) return { ...EMPTY_RESULT, fetched: true };
 
-    const html = await readCappedBody(res);
+    const html = res.body;
     const title = extractTitle(html);
     const visibleText = stripTags(html).toLowerCase();
     const titleLower = (title ?? "").toLowerCase();
@@ -148,7 +129,5 @@ export async function analyzePageContent(url: string): Promise<ContentAnalysisRe
     };
   } catch {
     return EMPTY_RESULT;
-  } finally {
-    clearTimeout(timer);
   }
 }

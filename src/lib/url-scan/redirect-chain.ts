@@ -1,4 +1,5 @@
 import { assertPublicHostname } from "@/lib/security/ssrf";
+import { safeFetch } from "@/lib/security/safe-fetch";
 
 // Mirrors RedirectChainResolver.kt: follows the redirect chain manually (redirects disabled
 // on the fetch itself) so every hop can be inspected — status code, Location header, loops,
@@ -66,13 +67,10 @@ export async function resolveRedirectChain(startUrl: string): Promise<RedirectCh
       break;
     }
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), HOP_TIMEOUT_MS);
     try {
-      const res = await fetch(current, {
-        method: "GET",
-        redirect: "manual",
-        signal: controller.signal,
+      // safeFetch re-validates the address at connect time (DNS rebinding) and never auto-follows.
+      const res = await safeFetch(current, {
+        timeoutMs: HOP_TIMEOUT_MS,
         headers: { "User-Agent": "NikScannerBot/1.0 (+https://niklaussolution.com)" },
       });
       hops.push({ url: current, status: res.status });
@@ -84,12 +82,15 @@ export async function resolveRedirectChain(startUrl: string): Promise<RedirectCh
       current = new URL(location, current).toString();
     } catch (e) {
       const isAbort = e instanceof Error && e.name === "AbortError";
+      if ((e as NodeJS.ErrnoException)?.code === "ESSRFBLOCKED") {
+        blockedBySsrf = true;
+        hops.push({ url: current, status: null, error: "Blocked: target resolves to a blocked internal address." });
+        break;
+      }
       timedOut = timedOut || isAbort;
       fetchFailed = fetchFailed || !isAbort;
       hops.push({ url: current, status: null, error: isAbort ? "Timed out" : "DNS/network failure" });
       break;
-    } finally {
-      clearTimeout(timer);
     }
   }
 
