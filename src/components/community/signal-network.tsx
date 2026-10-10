@@ -20,6 +20,7 @@ const CY = VB_H / 2;
 
 interface NodeDef {
   id: string;
+  name: string;
   reports: number;
   x: number;
   y: number;
@@ -28,7 +29,7 @@ interface NodeDef {
 
 // Same 8 fixed slot positions the hand-drawn network always used — real leaders are dropped
 // into these slots by rank, so the layout never changes, only who's shown in it.
-const POSITIONS: Omit<NodeDef, "id" | "reports">[] = [
+const POSITIONS: Omit<NodeDef, "id" | "name" | "reports">[] = [
   { x: 110, y: 60, side: "left" },
   { x: 90, y: 155, side: "left" },
   { x: 90, y: 250, side: "left" },
@@ -65,7 +66,7 @@ export function SignalNetwork() {
     publicJson<LeaderboardResult>("/api/leaderboard?limit=8")
       .then((res) => {
         if (cancelled) return;
-        setNodes(res.leaders.slice(0, 8).map((leader, i) => ({ ...POSITIONS[i], id: initialsFor(leader.name), reports: leader.count })));
+        setNodes(res.leaders.slice(0, 8).map((leader, i) => ({ ...POSITIONS[i], id: initialsFor(leader.name), name: leader.name, reports: leader.count })));
       })
       .catch(() => {
         // Non-fatal — the network just renders with no nodes until this succeeds.
@@ -194,18 +195,25 @@ export function SignalNetwork() {
           <div
             key={`node-${i}`}
             data-net-node
-            className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-2"
-            style={{ left: `${(n.x / VB_W) * 100}%`, top: `${(n.y / VB_H) * 100}%`, flexDirection: n.side === "right" ? "row-reverse" : "row" }}
+            className={`absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 sm:gap-2 ${
+              n.side === "right" ? "flex-col sm:flex-row-reverse" : "flex-col sm:flex-row"
+            }`}
+            style={{ left: `${(n.x / VB_W) * 100}%`, top: `${(n.y / VB_H) * 100}%` }}
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/15 bg-card-bg text-[10px] font-bold text-white shadow-lg shadow-black/40 sm:h-11 sm:w-11 sm:text-sm">
               {n.id}
             </span>
+            {/* Phones: just the name, under the circle (a side label would run into the hub) */}
+            <span className="max-w-[60px] truncate text-[9px] font-semibold leading-tight text-soft-white sm:hidden" title={n.name}>
+              {n.name}
+            </span>
             <span
-              className={`hidden whitespace-nowrap text-[11px] leading-tight text-muted sm:inline ${n.side === "right" ? "text-right" : "text-left"}`}
+              className={`hidden text-[11px] leading-tight text-muted sm:inline ${n.side === "right" ? "text-right" : "text-left"}`}
             >
-              Contributed
-              <br />
-              <span className="text-soft-white">{n.reports} reports</span>
+              <span className="block max-w-[130px] truncate font-semibold text-white" title={n.name}>
+                {n.name}
+              </span>
+              <span className="whitespace-nowrap text-soft-white">{n.reports} reports</span>
             </span>
           </div>
         ))}

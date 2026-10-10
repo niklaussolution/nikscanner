@@ -8,6 +8,7 @@ import { Check, CreditCard, Clock3, ShieldCheck, Loader2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { publicJson } from "@/lib/firebase/api";
+import { useAuth } from "@/lib/firebase/auth-context";
 import type { BackendPlan, PaymentPlansResult } from "@/lib/firebase/nikscanner-types";
 
 if (typeof window !== "undefined") {
@@ -57,6 +58,7 @@ const TRUST_ITEMS: { icon: LucideIcon; label: string }[] = [
 ];
 
 export function PricingPreview() {
+  const { user } = useAuth();
   const sectionRef = useRef<HTMLDivElement>(null);
   const featuredButtonRef = useRef<HTMLAnchorElement>(null);
   const [plans, setPlans] = useState<BackendPlan[] | null>(null);
@@ -137,19 +139,25 @@ export function PricingPreview() {
 
         {error && <p className="mt-8 text-center text-sm text-danger">{error}</p>}
 
-        {/* pricing cards */}
-        <div className="relative mt-14 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 ">
+        {/* pricing cards — a centered wrapping row rather than a grid, so an incomplete last row
+            sits in the middle (4 plans: three on top, the fourth centered below) */}
+        <div className="relative mt-14 flex flex-wrap justify-center gap-6">
           <div
             aria-hidden
             className="pointer-events-none absolute left-1/2 top-0 hidden h-full w-[38%] -translate-x-1/2 rounded-full bg-flame-primary/10 blur-[100px] lg:block"
           />
           {!plans ? (
-            <div className="col-span-full flex items-center justify-center gap-2 py-10 text-sm text-muted">
+            <div className="flex w-full items-center justify-center gap-2 py-10 text-sm text-muted">
               <Loader2 className="h-4 w-4 animate-spin" /> Loading plans...
             </div>
           ) : (
             displayPlans.map((plan) => (
-              <div key={plan.id} data-card data-featured={plan.featured ? "" : undefined} className="relative flex">
+              <div
+                key={plan.id}
+                data-card
+                data-featured={plan.featured ? "" : undefined}
+                className="relative flex w-full md:w-[calc((100%-1.5rem)/2)] lg:w-[calc((100%-3rem)/3)]"
+              >
                 {/* inner wrapper carries hover/elevation transforms — kept separate from the
                     GSAP-animated outer wrapper above, since GSAP's transform tween on an
                     element permanently overrides any CSS `translate` utility on that same node */}
@@ -187,7 +195,7 @@ export function PricingPreview() {
                   </ul>
 
                   <Link
-                    href={plan.href}
+                    href={user ? "/pricing" : plan.href}
                     ref={plan.featured ? featuredButtonRef : undefined}
                     className={cn(
                       "mt-7 flex h-13 w-full items-center justify-center rounded-lg text-base font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-flame-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg-black",
@@ -196,7 +204,9 @@ export function PricingPreview() {
                         : "border border-white/15 bg-transparent text-white hover:border-flame-primary/50 hover:text-flame-bright",
                     )}
                   >
-                    {plan.cta}
+                    {/* Signed-in users already have an account — send them to /pricing, which runs
+                        checkout directly; everyone else signs up first. */}
+                    {user ? "Upgrade Now" : plan.cta}
                   </Link>
                 </div>
               </div>

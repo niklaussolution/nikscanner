@@ -22,6 +22,7 @@ import { runLocalFileScan } from "@/lib/file-scan/local-scan";
 import { runMlScan, supportsMlScan, type MlScanResult } from "@/lib/firebase/ml-scan";
 import { consumeCredit } from "@/lib/firebase/credits";
 import { Toast } from "@/components/ui/toast";
+import { useRefreshOnFocus } from "@/lib/use-refresh-on-focus";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { authedJson } from "@/lib/firebase/api";
 import type { CreditsBalanceResult } from "@/lib/firebase/nikscanner-types";
@@ -135,6 +136,8 @@ export function FileScannerWorkspace() {
   useEffect(() => {
     refreshBalance();
   }, [refreshBalance]);
+  // File scans bought or used in the mobile app count against the same allowance.
+  useRefreshOnFocus(refreshBalance, !!user);
 
   useEffect(() => {
     if (!user) return;

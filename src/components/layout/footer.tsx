@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "./logo";
-import { GithubIcon, LinkedinIcon, XIcon, YoutubeIcon } from "@/components/ui/social-icons";
+import { Instagram, LinkedinIcon, YoutubeIcon, Facebook } from "@/components/ui/social-icons";
 
 const COLUMNS = [
   {
@@ -33,10 +33,11 @@ const COLUMNS = [
 ];
 
 const SOCIAL = [
-  { icon: GithubIcon, href: "https://github.com" },
-  { icon: LinkedinIcon, href: "https://linkedin.com" },
-  { icon: XIcon, href: "https://x.com" },
+  { icon: Instagram, href: "https://instagram.com"},
+  { icon: Facebook, href: "https://facebook.com"},
   { icon: YoutubeIcon, href: "https://youtube.com" },
+  { icon: LinkedinIcon, href: "https://linkedin.com" },
+  // { icon: FaceBook, href: "http://youtube.com"}
 ];
 
 export function Footer() {

@@ -5,6 +5,7 @@ import { CreditCard, Loader2, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useRefreshOnFocus } from "@/lib/use-refresh-on-focus";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { authedJson, publicJson } from "@/lib/firebase/api";
 import { startCheckout } from "@/lib/firebase/razorpay";
@@ -30,6 +31,9 @@ export default function BillingPage() {
       .then((res) => setBalance(res))
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load billing info."));
   }
+
+  // Purchases made in the mobile app land on the same account — pick them up on tab focus.
+  useRefreshOnFocus(refreshBalance, !authLoading && !!user);
 
   useEffect(() => {
     if (authLoading || !user) return;

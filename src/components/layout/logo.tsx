@@ -26,14 +26,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import logoImg from "@/app/nikscanner-logo.png";
-import markImg from "@/app/nikscanner-mark.png";
 
 export function Logo({ className }: { className?: string }) {
   return (
     <Link href="/" aria-label="NIKSCANNER home" className={cn("flex items-center gap-2 shrink-0", className)}>
-      {/* Shield mark only on mobile, full logo from md up */}
-      <Image src={markImg} alt="NIKSCANNER" priority className="h-8 w-auto md:hidden" />
-      <Image src={logoImg} alt="NIKSCANNER" priority className="hidden h-10 w-auto md:block" />
+      {/* Icon + "NIKSCANNER" wordmark, both from the source logo file, on every screen size */}
+      <Image src={logoImg} alt="NIKSCANNER" priority className="h-7 w-auto sm:h-8 md:h-10" />
     </Link>
   );
 }

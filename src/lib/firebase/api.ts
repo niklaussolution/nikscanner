@@ -9,13 +9,16 @@ function nikscannerUrl(path: string): string {
 }
 
 /** Turns a backend error response into a message fit to show a user. */
-function backendErrorMessage(res: Response, data: { error?: string; retry_after?: number }): string {
+function backendErrorMessage(res: Response, data: { error?: string; detail?: string; retry_after?: number }): string {
   if (res.status === 429) {
     const minutes = data.retry_after ? Math.max(1, Math.ceil(data.retry_after / 60)) : null;
     return minutes
       ? `Too many requests. Please wait about ${minutes} minute${minutes === 1 ? "" : "s"} and try again.`
       : "Too many requests. Please wait a few minutes and try again.";
   }
+  // `detail` carries the underlying cause when the backend has one (e.g. create_order_failed
+  // (ENOTFOUND) = the server can't reach Razorpay) — far more useful than the bare code.
+  if (data.error && typeof data.detail === "string" && data.detail) return `${data.error} (${data.detail})`;
   return data.error || `Request failed (${res.status})`;
 }
 

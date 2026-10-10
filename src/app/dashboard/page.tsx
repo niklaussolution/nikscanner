@@ -7,6 +7,7 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { ThreatTrendChart } from "@/components/dashboard/threat-trend-chart";
 import { RiskBadge } from "@/components/scanner/risk-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRefreshOnFocus } from "@/lib/use-refresh-on-focus";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { authedJson } from "@/lib/firebase/api";
 import { THREAT_SEVERITY_LEVELS } from "@/types/scan";
@@ -34,6 +35,9 @@ export default function DashboardOverviewPage() {
   const { user, loading: authLoading } = useAuth();
   const [data, setData] = useState<OverviewData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Bumped on tab focus so balance/plan changes made in the mobile app show up here.
+  const [reloadKey, setReloadKey] = useState(0);
+  useRefreshOnFocus(() => setReloadKey((k) => k + 1), !authLoading && !!user);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -68,7 +72,7 @@ export default function DashboardOverviewPage() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, user]);
+  }, [authLoading, user, reloadKey]);
 
   return (
     <div className="space-y-6">
