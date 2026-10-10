@@ -1,5 +1,5 @@
 import { authedJson } from "@/lib/firebase/api";
-import type { BackendPlan, CreateOrderResult, CreditedAccountResult, PaymentStatusResult } from "@/lib/firebase/nikscanner-types";
+import type { BackendPlan, CreateOrderResult, CreditedAccountResult, PaymentStatusResult, ReconcileResult } from "@/lib/firebase/nikscanner-types";
 
 // Client-side half of the same Razorpay flow already integrated in the mobile app — the backend
 // (F:\c\nikscanner-rebuild\backend\server.js) already has the Key ID/Secret, order creation,
@@ -155,4 +155,34 @@ export async function startCheckout(plan: BackendPlan, userEmail?: string): Prom
 
     razorpay.open();
   });
+}
+
+/** Asks the backend to find any of this user's recent payments that took their money but were
+ *  never credited (checkout closed mid-UPI, tab closed, payment left "authorized"), capture them
+ *  and credit them. Idempotent — safe to call on every page load. */
+export function reconcilePayments(): Promise<ReconcileResult> {
+  return authedJson<ReconcileResult>("/api/payment/reconcile", { method: "POST" });
+}
+
+/** UPI/bank confirmation can land seconds after the checkout window closes — re-check a few
+ *  times (5s, 20s, 60s) and report once anything gets credited. Returns a cancel function. */
+export function reconcileWithRetries(onCredited: (labels: string[]) => void): () => void {
+  let stopped = false;
+  const timers = [5_000, 20_000, 60_000].map((ms) =>
+    setTimeout(() => {
+      if (stopped) return;
+      reconcilePayments()
+        .then((res) => {
+          if (!stopped && res.credited.length > 0) {
+            stopped = true;
+            onCredited(res.credited.map((c) => c.plan_label));
+          }
+        })
+        .catch(() => {});
+    }, ms),
+  );
+  return () => {
+    stopped = true;
+    timers.forEach(clearTimeout);
+  };
 }

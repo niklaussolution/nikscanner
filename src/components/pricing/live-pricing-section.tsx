@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { PricingCard, type PricingTier } from "@/components/pricing/pricing-card";
 import { publicJson } from "@/lib/firebase/api";
 import { useAuth } from "@/lib/firebase/auth-context";
-import { startCheckout } from "@/lib/firebase/razorpay";
+import { startCheckout, reconcilePayments, reconcileWithRetries } from "@/lib/firebase/razorpay";
 import type { BackendPlan, PaymentPlansResult } from "@/lib/firebase/nikscanner-types";
 
 function tierFromPlan(
@@ -38,6 +38,19 @@ export function LivePricingSection() {
   const [checkoutPlanKey, setCheckoutPlanKey] = useState<string | null>(null);
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
 
+  // Credits any earlier payment that was debited but never confirmed (closed checkout, UPI app
+  // switch, mobile-app purchase interrupted). Runs once the user is known.
+  useEffect(() => {
+    if (!user) return;
+    reconcilePayments()
+      .then((res) => {
+        if (res.credited.length > 0) {
+          setCheckoutMessage(`We confirmed an earlier payment — ${res.credited.map((c) => c.plan_label).join(", ")} plan credited to your account.`);
+        }
+      })
+      .catch(() => {});
+  }, [user]);
+
   useEffect(() => {
     publicJson<PaymentPlansResult>("/api/payment/plans")
       .then((res) => setPlans(res.plans))
@@ -53,8 +66,12 @@ export function LivePricingSection() {
       const outcome = await startCheckout(plan, user.email ?? undefined);
       if (outcome.status === "credited") {
         setCheckoutMessage(`Payment successful — ${outcome.result.plan_label} plan is now active.`);
-      } else if (outcome.status === "pending_reconciliation") {
-        setCheckoutMessage("We couldn't immediately confirm this payment — if it went through, your account will be credited shortly.");
+      } else {
+        // Not confirmed yet — a UPI/bank payment can complete just after the window closes.
+        setCheckoutMessage(
+          "Payment not confirmed yet. If money was debited, it will be added to your account automatically within a minute — no need to pay again.",
+        );
+        reconcileWithRetries((labels) => setCheckoutMessage(`Payment confirmed — ${labels.join(", ")} plan credited to your account.`));
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Checkout failed. Please try again.");

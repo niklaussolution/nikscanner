@@ -140,6 +140,12 @@ export interface CreditedAccountResult {
   plan_label: string;
 }
 
+export interface ReconcileResult {
+  ok: true;
+  /** Payments that had taken the user's money but were only credited now. */
+  credited: { order_id: string; payment_id: string; plan_key: string; plan_label: string }[];
+}
+
 export interface PaymentStatusResult {
   ok: true;
   captured: boolean;

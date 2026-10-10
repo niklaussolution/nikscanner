@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useRefreshOnFocus } from "@/lib/use-refresh-on-focus";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { authedJson, publicJson } from "@/lib/firebase/api";
-import { startCheckout } from "@/lib/firebase/razorpay";
+import { startCheckout, reconcilePayments, reconcileWithRetries } from "@/lib/firebase/razorpay";
 import type { CreditsBalanceResult, BackendPlan, PaymentPlansResult } from "@/lib/firebase/nikscanner-types";
 
 export default function BillingPage() {
@@ -31,6 +31,21 @@ export default function BillingPage() {
       .then((res) => setBalance(res))
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load billing info."));
   }
+
+  // Credits any earlier payment that was debited but never confirmed (closed checkout, UPI app
+  // switch, mobile-app purchase interrupted).
+  useEffect(() => {
+    if (authLoading || !user) return;
+    reconcilePayments()
+      .then((res) => {
+        if (res.credited.length > 0) {
+          setCheckoutMessage(`We confirmed an earlier payment — ${res.credited.map((c) => c.plan_label).join(", ")} plan credited to your account.`);
+          refreshBalance();
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user]);
 
   // Purchases made in the mobile app land on the same account — pick them up on tab focus.
   useRefreshOnFocus(refreshBalance, !authLoading && !!user);
@@ -63,10 +78,16 @@ export default function BillingPage() {
       if (outcome.status === "credited") {
         setCheckoutMessage(`Payment successful — ${outcome.result.plan_label} plan is now active.`);
         refreshBalance();
-      } else if (outcome.status === "pending_reconciliation") {
-        setCheckoutMessage("We couldn't immediately confirm this payment — if it went through, your account will be credited shortly. Refresh this page in a minute to check.");
+      } else {
+        // Not confirmed yet — a UPI/bank payment can complete just after the window closes.
+        setCheckoutMessage(
+          "Payment not confirmed yet. If money was debited, it will be added to your account automatically within a minute — no need to pay again.",
+        );
+        reconcileWithRetries((labels) => {
+          setCheckoutMessage(`Payment confirmed — ${labels.join(", ")} plan credited to your account.`);
+          refreshBalance();
+        });
       }
-      // "cancelled" — the user closed the checkout widget without paying; nothing to show.
     } catch (e) {
       setError(e instanceof Error ? e.message : "Checkout failed. Please try again.");
     } finally {
