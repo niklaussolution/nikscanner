@@ -29,7 +29,7 @@ interface RazorpayCheckoutOptions {
 
 interface RazorpayCheckoutInstance {
   open: () => void;
-  on: (event: "payment.failed", handler: (response: { error: { description?: string } }) => void) => void;
+  on: (event: "payment.failed", handler: (response: { error: { description?: string; reason?: string } }) => void) => void;
 }
 
 declare global {
@@ -62,6 +62,9 @@ function loadCheckoutScript(): Promise<void> {
 export type PaymentOutcome =
   | { status: "credited"; result: CreditedAccountResult }
   | { status: "cancelled" }
+  /** Razorpay declined the payment (bank failure, risk check, timeout...). Any amount the bank
+   *  debited for a failed payment is refunded automatically. */
+  | { status: "failed"; reason: string }
   | { status: "pending_reconciliation" };
 
 /** Runs the full checkout flow for one plan: create the order, open Razorpay's widget, verify
@@ -86,6 +89,9 @@ export async function startCheckout(plan: BackendPlan, userEmail?: string): Prom
     }
 
     let settled = false;
+    // Set when Razorpay reports a failed attempt. The checkout window stays open so the user can
+    // retry; if it's then closed without a successful payment, this is what we report.
+    let lastFailure: string | null = null;
 
     const reconcile = async () => {
       if (settled) return;
@@ -108,7 +114,7 @@ export async function startCheckout(plan: BackendPlan, userEmail?: string): Prom
             },
           });
         } else {
-          resolve({ status: "cancelled" });
+          resolve(lastFailure ? { status: "failed", reason: lastFailure } : { status: "cancelled" });
         }
       } catch {
         // The widget was dismissed and we can't yet confirm whether money moved — surfaced
@@ -149,8 +155,8 @@ export async function startCheckout(plan: BackendPlan, userEmail?: string): Prom
       modal: { ondismiss: reconcile },
     } as RazorpayCheckoutOptions);
 
-    razorpay.on("payment.failed", () => {
-      reconcile();
+    razorpay.on("payment.failed", (response) => {
+      lastFailure = response?.error?.description || response?.error?.reason || "The payment was declined.";
     });
 
     razorpay.open();

@@ -78,6 +78,8 @@ export default function BillingPage() {
       if (outcome.status === "credited") {
         setCheckoutMessage(`Payment successful — ${outcome.result.plan_label} plan is now active.`);
         refreshBalance();
+      } else if (outcome.status === "failed") {
+        setError(`Payment failed: ${outcome.reason} Any amount debited for a failed payment is refunded automatically by your bank.`);
       } else {
         // Not confirmed yet — a UPI/bank payment can complete just after the window closes.
         setCheckoutMessage(
