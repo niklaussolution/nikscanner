@@ -13,14 +13,6 @@ export function Instagram(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function LinkedinIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-      <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9h4v12H3V9Zm7 0h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.78 2.65 4.78 6.1V21h-4v-5.4c0-1.29-.02-2.95-1.8-2.95-1.8 0-2.08 1.4-2.08 2.85V21h-4V9Z" />
-    </svg>
-  );
-}
-
 export function Facebook(props: SVGProps<SVGSVGElement>) { return ( <svg viewBox="0 0 24 24" fill="currentColor" {...props}> <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.413c0-3.025 1.792-4.707 4.533-4.707 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.49 0-1.956.93-1.956 1.885v2.276h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073Z" /> </svg> ); }
 
 export function YoutubeIcon(props: SVGProps<SVGSVGElement>) {

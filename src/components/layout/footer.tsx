@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "./logo";
-import { Instagram, LinkedinIcon, YoutubeIcon, Facebook } from "@/components/ui/social-icons";
+import { Instagram, YoutubeIcon, Facebook } from "@/components/ui/social-icons";
 
 const COLUMNS = [
   {
@@ -33,10 +33,10 @@ const COLUMNS = [
 ];
 
 const SOCIAL = [
-  { icon: Instagram, href: "https://instagram.com"},
-  { icon: Facebook, href: "https://facebook.com"},
-  { icon: YoutubeIcon, href: "https://youtube.com" },
-  { icon: LinkedinIcon, href: "https://linkedin.com" },
+  { icon: Instagram, href: "https://www.instagram.com/niklaussolution_official?obrf=Z2gyazEwdzVrMjZ3&utm_source=qr"},
+  { icon: Facebook, href: "https://www.facebook.com/share/18FPwWvHxH/?mibextid=wwXIfr"},
+  { icon: YoutubeIcon, href: "https://youtube.com/@niklaussolution?si=-DnnQdR4Fa5Sy7ce" },
+  // { icon: LinkedinIcon, href: "https://linkedin.com" },
   // { icon: FaceBook, href: "http://youtube.com"}
 ];
 
