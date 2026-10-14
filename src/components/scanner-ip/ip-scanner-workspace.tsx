@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Toast } from "@/components/ui/toast";
+import { consumeCredit } from "@/lib/firebase/credits";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { AlertTriangle, MapPin, Network, ShieldCheck, Ghost, Wifi, Globe } from "lucide-react";
@@ -120,6 +123,8 @@ export function IpScannerWorkspace() {
 
   const [value, setValue] = useState(DEFAULT_IP);
   const [scanState, setScanState] = useState<IpScanState>("idle");
+  const [showCreditsToast, setShowCreditsToast] = useState(false);
+  const router = useRouter();
   const [activeStageIndex, setActiveStageIndex] = useState(0);
   const [result, setResult] = useState<IpScanPayload | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -220,6 +225,21 @@ export function IpScannerWorkspace() {
     setErrorMessage(null);
     setScanState("scanning");
     setActiveStageIndex(0);
+
+    // 1 credit per IP scan (server-decided, never trusted from a cached client balance) —
+    // deducted before the scan runs so a scan can't start without the credits to pay for it.
+    try {
+      const consume = await consumeCredit("ip_scan");
+      if (!consume.allowed) {
+        setScanState("idle");
+        setShowCreditsToast(true);
+        return;
+      }
+    } catch (e) {
+      setScanState("error");
+      setErrorMessage(e instanceof Error ? e.message : "Could not check your scan credits.");
+      return;
+    }
 
     let i = 0;
     stageTimerRef.current = setInterval(() => {
@@ -364,6 +384,13 @@ export function IpScannerWorkspace() {
 
       {result && (scanState === "complete" || scanState === "partial") && <ReputationSources engines={result.engines} />}
       <RecentScans scans={recentIps} title="Recent IP Scans" />
+      {showCreditsToast && (
+        <Toast
+          message="Credits over"
+          action={{ label: "Upgrade", onClick: () => router.push("/dashboard/billing") }}
+          onDismiss={() => setShowCreditsToast(false)}
+        />
+      )}
     </>
   );
 }
